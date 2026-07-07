@@ -1,5 +1,7 @@
-# Portfolio data (local only)
+# Portfolio / bot local state
 portfolio.json
+paper_state.json
+.env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
