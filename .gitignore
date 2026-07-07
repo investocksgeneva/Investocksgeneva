@@ -1,3 +1,6 @@
+# Portfolio data (local only)
+portfolio.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
