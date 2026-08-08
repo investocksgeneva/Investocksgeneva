@@ -217,4 +217,160 @@ export const week1: Week = {
   ],
 }
 
-export const weeks: Week[] = [week1]
+export const week2: Week = {
+  id: 2,
+  title: 'Week 2: Getting around',
+  goal:
+    'Get from your front door to a tram stop, buy a ticket, ride, and get off at the right stop — entirely in French.',
+  sessions: [
+    {
+      id: 1,
+      title: 'Asking for directions',
+      subtitle: 'Où est... ?',
+      kind: 'phrases',
+      corePhrases: [
+        { fr: 'Excusez-moi', en: 'Excuse me' },
+        { fr: 'Où est... ?', en: 'Where is... ?' },
+        { fr: 'Où se trouve... ?', en: 'Where is... located?' },
+        { fr: "C'est loin ?", en: 'Is it far?' },
+        { fr: "C'est près d'ici", en: "It's close by" },
+        { fr: 'Tout droit', en: 'Straight ahead' },
+        { fr: 'À gauche', en: 'To the left' },
+        { fr: 'À droite', en: 'To the right' },
+        { fr: 'Au coin de', en: 'At the corner of' },
+        { fr: 'En face de', en: 'Across from' },
+      ],
+      grammarSeed:
+        '"Excusez-moi" always opens a direction question in Geneva — it signals politeness before interrupting a stranger. Pair it with "vous", same as always.',
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: "Excusez-moi, où est l'arrêt de tram le plus proche ?",
+          en: "Excuse me, where's the nearest tram stop?",
+        },
+        {
+          speaker: 'B',
+          fr: 'C\'est tout droit, à cinq minutes à pied.',
+          en: "It's straight ahead, a five-minute walk.",
+        },
+        { speaker: 'A', fr: 'Merci beaucoup !', en: 'Thank you very much!' },
+        { speaker: 'B', fr: 'Je vous en prie.', en: "You're welcome." },
+      ],
+      drill:
+        'Ask for directions to three different places out loud: la gare, une pharmacie, un arrêt de bus.',
+    },
+    {
+      id: 2,
+      title: 'TPG & tickets',
+      subtitle: 'Buying your way onto the tram',
+      kind: 'transaction',
+      grammarSeed:
+        "Geneva's entire public transport network — bus, tram, and trains within the city — runs under one brand: unireso. One ticket covers all of it, so you never need to specify bus vs. tram when buying.",
+      useCases: [
+        { phrase: 'Un billet pour…, s\'il vous plaît.', use: 'buying a ticket' },
+        { phrase: 'C\'est quelle ligne pour… ?', use: 'asking which line goes somewhere' },
+        {
+          phrase: 'Le prochain bus/tram, c\'est à quelle heure ?',
+          use: 'asking the next departure time',
+        },
+        { phrase: 'Ça s\'arrête où ?', use: 'asking where it stops' },
+        { phrase: 'C\'est direct ou il faut changer ?', use: 'asking about transfers' },
+      ],
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: 'Bonjour, un billet pour Cornavin, s\'il vous plaît.',
+          en: 'Hello, one ticket to Cornavin, please.',
+        },
+        {
+          speaker: 'B',
+          fr: 'Voilà, c\'est le tram 15, quai B.',
+          en: "Here you go, it's tram 15, platform B.",
+        },
+        { speaker: 'A', fr: 'Merci, et c\'est direct ?', en: 'Thanks, and is it direct?' },
+        { speaker: 'B', fr: 'Oui, c\'est direct, dix minutes.', en: "Yes, it's direct, ten minutes." },
+      ],
+      drill: 'Practice asking for a ticket to three destinations you actually go to.',
+    },
+    {
+      id: 3,
+      title: 'On board',
+      subtitle: 'Getting off at the right stop',
+      kind: 'phrases',
+      corePhrases: [
+        {
+          fr: 'Vous descendez à la prochaine ?',
+          en: 'Are you getting off at the next stop?',
+        },
+        { fr: 'Je descends, s\'il vous plaît', en: "I'm getting off, excuse me" },
+        {
+          fr: 'Le prochain arrêt, s\'il vous plaît ?',
+          en: "What's the next stop, please?",
+        },
+        { fr: 'C\'est bien la direction de… ?', en: 'Is this heading towards…?' },
+        { fr: 'Merci, c\'est ici', en: "Thanks, this is my stop" },
+      ],
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: 'Excusez-moi, vous descendez à la prochaine ?',
+          en: 'Excuse me, are you getting off at the next stop?',
+        },
+        { speaker: 'B', fr: 'Non, allez-y.', en: 'No, go ahead.' },
+        {
+          speaker: 'A',
+          fr: 'Merci ! Le prochain arrêt, s\'il vous plaît ?',
+          en: "Thanks! What's the next stop, please?",
+        },
+        { speaker: 'B', fr: 'Molard, c\'est le prochain.', en: "Molard, it's next." },
+        { speaker: 'A', fr: 'Merci, c\'est ici !', en: "Thanks, this is my stop!" },
+      ],
+      drill: 'Rehearse squeezing past someone and confirming your stop, out loud, 5x.',
+    },
+    {
+      id: 4,
+      title: 'Consolidation & role-play',
+      subtitle: 'Checkpoint: cross town',
+      kind: 'roleplay',
+      drill:
+        'Combine Sessions 1–3 into one unscripted role-play: from your front door to a tram stop, buy a ticket, ride, and get off at the right stop. This is Week 2\'s checkpoint.',
+      roleplaySteps: [
+        {
+          title: 'Ask a stranger for directions',
+          hint: "Excusez-moi, où est l'arrêt de tram ?",
+        },
+        { title: 'Buy a ticket', hint: 'Un billet pour…, s\'il vous plaît.' },
+        { title: 'Confirm the direction', hint: 'C\'est bien la direction de… ?' },
+        {
+          title: 'Ask to get off / confirm your stop',
+          hint: 'Je descends, s\'il vous plaît. Merci, c\'est ici.',
+        },
+        { title: 'Thank and step off', hint: 'Merci, au revoir !' },
+      ],
+    },
+  ],
+  vocab: [
+    { fr: 'où', en: 'where' },
+    { fr: 'un arrêt', en: 'a stop' },
+    { fr: 'un billet', en: 'a ticket' },
+    { fr: 'une ligne', en: 'a line (route)' },
+    { fr: 'le quai', en: 'the platform' },
+    { fr: 'la correspondance', en: 'the transfer/connection' },
+    { fr: 'tout droit', en: 'straight ahead' },
+    { fr: 'à gauche', en: 'to the left' },
+    { fr: 'à droite', en: 'to the right' },
+    { fr: 'loin', en: 'far' },
+    { fr: 'près', en: 'close/near' },
+    { fr: 'un tram', en: 'a tram' },
+    { fr: 'un bus', en: 'a bus' },
+    { fr: 'la gare', en: 'the train station' },
+    { fr: 'descendre', en: 'to get off' },
+    { fr: 'monter', en: 'to get on' },
+    { fr: 'la direction', en: 'the direction' },
+    { fr: 'le prochain', en: 'the next one' },
+    { fr: "l'horaire", en: 'the schedule' },
+    { fr: 'unireso', en: 'unireso (Geneva\'s unified transport ticket network)' },
+  ],
+}
+
+export const weeks: Week[] = [week1, week2]

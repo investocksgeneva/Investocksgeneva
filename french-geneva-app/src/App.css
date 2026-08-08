@@ -61,6 +61,33 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.week-switcher {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.week-switcher-item {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.week-switcher-item.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
 .screen {
   padding: 16px;
   padding-bottom: 32px;
