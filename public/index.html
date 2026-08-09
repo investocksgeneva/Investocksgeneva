@@ -16,13 +16,16 @@
 
 <header class="topbar">
   <h1>Articulations</h1>
-  <button id="newScenarioBtn" class="ghost-btn" hidden>New scenario</button>
+  <div class="topbar-actions">
+    <button id="voiceToggleBtn" class="icon-toggle" hidden aria-pressed="false" title="Toggle spoken replies">🔊</button>
+    <button id="newScenarioBtn" class="ghost-btn" hidden>New scenario</button>
+  </div>
 </header>
 
 <main>
   <!-- SETUP SCREEN -->
   <section id="setupScreen" class="screen">
-    <p class="intro">Describe the conversation you need to have. Claude will play the other person so you can rehearse it.</p>
+    <p class="intro">Describe the conversation you need to have. Claude will play the other person so you can rehearse it — by typing or, on supported browsers, out loud with the mic button.</p>
 
     <form id="setupForm">
       <label for="situation">What's the situation?</label>
@@ -52,6 +55,7 @@
     <div id="feedbackPanel" class="feedback-panel" hidden></div>
 
     <form id="chatForm" class="chat-input-row">
+      <button type="button" id="micBtn" class="mic-btn" aria-pressed="false" aria-label="Speak your line" hidden>🎤</button>
       <textarea id="chatInput" placeholder="Say your line…" rows="1" required></textarea>
       <button type="submit" class="send-btn" aria-label="Send">➤</button>
     </form>

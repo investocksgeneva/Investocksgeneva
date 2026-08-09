@@ -7,6 +7,8 @@ const messagesEl = document.getElementById("messages");
 const newScenarioBtn = document.getElementById("newScenarioBtn");
 const endBtn = document.getElementById("endBtn");
 const feedbackPanel = document.getElementById("feedbackPanel");
+const micBtn = document.getElementById("micBtn");
+const voiceToggleBtn = document.getElementById("voiceToggleBtn");
 
 let state = {
   system: "",
@@ -14,7 +16,83 @@ let state = {
   messages: [], // {role: 'user'|'assistant', content: string}
 };
 
+// ---- Voice (Phase 2) ----------------------------------------------------
+
+const SpeechRecognitionImpl = window.SpeechRecognition || window.webkitSpeechRecognition;
+const speechSupported = !!SpeechRecognitionImpl;
+const ttsSupported = "speechSynthesis" in window;
+
+let recognition = null;
+let listening = false;
+let voiceRepliesEnabled = localStorage.getItem("articulations_voice_replies") === "true";
+
+if (speechSupported) {
+  micBtn.hidden = false;
+  recognition = new SpeechRecognitionImpl();
+  recognition.lang = "en-US";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.addEventListener("result", (e) => {
+    const transcript = e.results[0]?.[0]?.transcript?.trim();
+    if (transcript) {
+      chatInput.value = transcript;
+      autoGrow(chatInput);
+      chatForm.requestSubmit();
+    }
+  });
+
+  recognition.addEventListener("end", () => {
+    listening = false;
+    micBtn.setAttribute("aria-pressed", "false");
+  });
+
+  recognition.addEventListener("error", () => {
+    listening = false;
+    micBtn.setAttribute("aria-pressed", "false");
+  });
+}
+
+if (ttsSupported) {
+  voiceToggleBtn.hidden = false;
+  voiceToggleBtn.setAttribute("aria-pressed", String(voiceRepliesEnabled));
+}
+
+micBtn?.addEventListener("click", () => {
+  if (!recognition) return;
+  if (listening) {
+    recognition.stop();
+    return;
+  }
+  window.speechSynthesis?.cancel();
+  try {
+    recognition.start();
+    listening = true;
+    micBtn.setAttribute("aria-pressed", "true");
+  } catch {
+    // already started; ignore
+  }
+});
+
+voiceToggleBtn?.addEventListener("click", () => {
+  voiceRepliesEnabled = !voiceRepliesEnabled;
+  localStorage.setItem("articulations_voice_replies", String(voiceRepliesEnabled));
+  voiceToggleBtn.setAttribute("aria-pressed", String(voiceRepliesEnabled));
+  if (!voiceRepliesEnabled) window.speechSynthesis?.cancel();
+});
+
+function speak(text) {
+  if (!ttsSupported || !voiceRepliesEnabled) return;
+  const spoken = text.replace(/\*[^*]*\*/g, "").trim();
+  if (!spoken) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(spoken);
+  window.speechSynthesis.speak(utterance);
+}
+
 function resetToSetup() {
+  window.speechSynthesis?.cancel();
+  if (listening) recognition?.stop();
   state = { system: "", feedbackSystem: "", messages: [] };
   messagesEl.innerHTML = "";
   feedbackPanel.hidden = true;
@@ -108,6 +186,7 @@ chatForm.addEventListener("submit", async (e) => {
     pending.remove();
     addBubble("other", data.reply);
     state.messages.push({ role: "assistant", content: data.reply });
+    speak(data.reply);
   } catch (err) {
     pending.remove();
     addBubble("other", err.message, "error");

@@ -19,7 +19,7 @@ Here are some ideas to get you started:
 
 A personal rehearsal tool: describe a tough conversation you need to have, and Claude plays the other person so you can practice it before it's real. When you're done, it steps out of character and gives you coaching feedback on how the conversation went.
 
-This is Phase 1 of the app — text roleplay only (no voice yet).
+Text roleplay (Phase 1) and voice (Phase 2) are both in. Session memory / scenario templates (Phase 3) aren't built yet.
 
 ### Run it locally
 
@@ -39,6 +39,15 @@ On your phone, open that URL in the browser (use your machine's LAN IP instead o
 - Claude roleplays that person in a normal back-and-forth chat.
 - Tap **End conversation & get feedback** any time to get out-of-character coaching on what worked and what to try differently.
 - **New scenario** clears the conversation and starts fresh. Nothing is saved between sessions — it's a stateless rehearsal tool.
+
+### Voice
+
+On browsers that support the Web Speech API (Chrome, Edge, Safari on recent iOS/macOS):
+
+- Tap the 🎤 mic button to speak your line instead of typing — it transcribes and sends automatically when you stop talking.
+- Tap 🔊 in the top bar to have the other person's replies read aloud (uses the browser's built-in text-to-speech, no extra API key needed). Off by default; your choice is remembered locally.
+
+If your browser doesn't support speech recognition or synthesis, those buttons just don't show up — typing still works everywhere.
 
 ### Stack
 
