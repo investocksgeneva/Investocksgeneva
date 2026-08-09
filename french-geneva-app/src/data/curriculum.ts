@@ -373,4 +373,153 @@ export const week2: Week = {
   ],
 }
 
-export const weeks: Week[] = [week1, week2]
+export const week3: Week = {
+  id: 3,
+  title: 'Week 3: Shopping & eating out',
+  goal:
+    'Buy groceries by weight and price, order a full meal while covering dietary needs, and check opening hours — all in French.',
+  sessions: [
+    {
+      id: 1,
+      title: 'At the market',
+      subtitle: 'Marché & épicerie basics',
+      kind: 'phrases',
+      corePhrases: [
+        { fr: 'Je cherche…', en: "I'm looking for…" },
+        { fr: 'Vous avez… ?', en: 'Do you have… ?' },
+        { fr: "C'est combien le kilo ?", en: 'How much per kilo?' },
+        { fr: 'Un peu plus', en: 'A bit more' },
+        { fr: 'Un peu moins', en: 'A bit less' },
+        { fr: 'Ça suffit', en: "That's enough" },
+        { fr: "C'est tout, merci", en: "That's all, thanks" },
+        { fr: "C'est cher / Ce n'est pas cher", en: "It's expensive / It's not expensive" },
+      ],
+      grammarSeed:
+        'French uses "du", "de la", "des" (some/any) for quantities you can\'t count individually — "du pain" (some bread), "de la confiture" (some jam). Don\'t worry about mastering the rule yet; just recognize it when you hear it at the market.',
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: 'Bonjour, je cherche des tomates.',
+          en: "Hello, I'm looking for tomatoes.",
+        },
+        {
+          speaker: 'B',
+          fr: "Voilà, c'est quatre francs le kilo.",
+          en: "Here you go, it's four francs per kilo.",
+        },
+        {
+          speaker: 'A',
+          fr: "Un kilo, s'il vous plaît. C'est tout, merci.",
+          en: 'One kilo, please. That\'s all, thanks.',
+        },
+      ],
+      drill: 'Ask for three market items with quantities and prices, out loud.',
+    },
+    {
+      id: 2,
+      title: 'At the restaurant',
+      subtitle: 'Ordering a full meal',
+      kind: 'transaction',
+      useCases: [
+        { phrase: 'Une table pour deux, s\'il vous plaît.', use: 'requesting a table' },
+        { phrase: 'Je voudrais réserver une table.', use: 'booking ahead' },
+        { phrase: 'Qu\'est-ce que vous recommandez ?', use: 'asking for a recommendation' },
+        { phrase: 'Je suis végétarien(ne).', use: 'stating a dietary need' },
+        { phrase: 'Y a-t-il du gluten ?', use: 'asking about an allergen' },
+        { phrase: "L'addition, s'il vous plaît.", use: 'asking for the bill' },
+      ],
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: 'Bonsoir, une table pour deux, s\'il vous plaît.',
+          en: 'Good evening, a table for two, please.',
+        },
+        {
+          speaker: 'B',
+          fr: 'Bien sûr. Voici la carte.',
+          en: "Of course. Here's the menu.",
+        },
+        {
+          speaker: 'A',
+          fr: 'Merci. Je suis végétarienne — qu\'est-ce que vous recommandez ?',
+          en: "Thanks. I'm vegetarian — what do you recommend?",
+        },
+        {
+          speaker: 'B',
+          fr: 'La salade de chèvre chaud, c\'est très bon.',
+          en: 'The warm goat cheese salad is very good.',
+        },
+      ],
+      drill: 'Order a starter and a main, mention one dietary need, and ask for the bill — out loud, start to finish.',
+    },
+    {
+      id: 3,
+      title: 'Days, times & hours',
+      subtitle: 'Horaires d\'ouverture',
+      kind: 'phrases',
+      corePhrases: [
+        { fr: "C'est ouvert jusqu'à quelle heure ?", en: 'What time is it open until?' },
+        { fr: 'Ouvert / Fermé', en: 'Open / Closed' },
+        { fr: 'Aujourd\'hui / Demain / Hier', en: 'Today / Tomorrow / Yesterday' },
+        { fr: 'Le matin / L\'après-midi / Le soir', en: 'Morning / Afternoon / Evening' },
+        { fr: 'À quelle heure ?', en: 'At what time?' },
+        { fr: 'Lundi, mardi, mercredi…', en: 'Monday, Tuesday, Wednesday…' },
+      ],
+      grammarSeed:
+        'Geneva-specific habit: many small shops close Sunday, and some close Monday morning too — always check the posted "horaires" before you make a special trip.',
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: "Excusez-moi, c'est ouvert le dimanche ?",
+          en: 'Excuse me, is it open on Sundays?',
+        },
+        {
+          speaker: 'B',
+          fr: 'Non, fermé le dimanche. Ouvert lundi à samedi, huit heures à dix-huit heures.',
+          en: 'No, closed on Sundays. Open Monday to Saturday, 8am to 6pm.',
+        },
+        { speaker: 'A', fr: "D'accord, merci beaucoup.", en: 'Okay, thank you very much.' },
+      ],
+      drill: 'Read your own weekly schedule aloud in French: which days you work, and roughly what time.',
+    },
+    {
+      id: 4,
+      title: 'Consolidation & role-play',
+      subtitle: 'Checkpoint: a day out',
+      kind: 'roleplay',
+      drill:
+        'Combine Sessions 1–3 into one unscripted role-play: check a shop\'s hours, buy groceries by weight, then order a full restaurant meal and pay. This is Week 3\'s checkpoint.',
+      roleplaySteps: [
+        { title: 'Ask if it\'s open', hint: 'C\'est ouvert jusqu\'à quelle heure ?' },
+        { title: 'Ask for a market item by weight', hint: 'C\'est combien le kilo ?' },
+        { title: 'Get a restaurant table', hint: 'Une table pour deux, s\'il vous plaît.' },
+        { title: 'Mention a dietary need & order', hint: 'Je suis végétarien(ne). Je voudrais…' },
+        { title: 'Ask for the bill & thank', hint: 'L\'addition, s\'il vous plaît. Merci, au revoir !' },
+      ],
+    },
+  ],
+  vocab: [
+    { fr: 'je cherche', en: "I'm looking for" },
+    { fr: 'vous avez', en: 'you have (do you have)' },
+    { fr: 'un kilo', en: 'a kilo' },
+    { fr: 'un peu', en: 'a little' },
+    { fr: 'cher', en: 'expensive' },
+    { fr: 'une table', en: 'a table' },
+    { fr: 'réserver', en: 'to reserve/book' },
+    { fr: 'végétarien(ne)', en: 'vegetarian' },
+    { fr: "l'addition", en: 'the bill' },
+    { fr: "aujourd'hui", en: 'today' },
+    { fr: 'demain', en: 'tomorrow' },
+    { fr: 'hier', en: 'yesterday' },
+    { fr: 'le matin', en: 'the morning' },
+    { fr: 'le soir', en: 'the evening' },
+    { fr: 'ouvert', en: 'open' },
+    { fr: 'fermé', en: 'closed' },
+    { fr: 'à quelle heure', en: 'at what time' },
+    { fr: 'lundi', en: 'Monday' },
+    { fr: 'samedi', en: 'Saturday' },
+    { fr: 'dimanche', en: 'Sunday' },
+  ],
+}
+
+export const weeks: Week[] = [week1, week2, week3]

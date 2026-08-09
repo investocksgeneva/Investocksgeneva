@@ -132,6 +132,29 @@ export const faq: FaqEntry[] = [
     keywords: ['tout droit', 'à droite', 'à gauche', 'straight', 'right', 'left', 'directions'],
   },
   {
+    id: 'du-de-la-des',
+    question: 'What are "du", "de la", and "des" for?',
+    answer:
+      'These are "partitive articles" — used for an unspecified amount of something, like English "some". "Du" goes with masculine nouns (du pain, some bread), "de la" with feminine nouns (de la confiture, some jam), and "des" with plurals (des tomates, some tomatoes). At the market you\'ll hear these constantly ("Je voudrais du fromage") — you don\'t need to master the grammar yet, just recognize the pattern.',
+    keywords: [
+      'du', 'de la', 'des', 'partitive', 'some', 'du de la des',
+    ],
+  },
+  {
+    id: 'cher-chere',
+    question: 'Why is it "cher" sometimes and "chère" other times?',
+    answer:
+      'French adjectives change spelling to match the gender of the noun they describe — "cher" for masculine ("un billet cher"), "chère" for feminine ("une chambre chère"). Most adjectives just add an "-e" for the feminine form. It rarely changes the pronunciation much, so don\'t stress over it in speech — it matters more in writing.',
+    keywords: ['cher', 'chère', 'adjective agreement', 'masculine feminine adjective'],
+  },
+  {
+    id: 'quest-ce-que',
+    question: 'What does "qu\'est-ce que" mean?',
+    answer:
+      'It\'s a set phrase meaning roughly "what is it that…", used to start a question about a thing — "Qu\'est-ce que vous recommandez ?" ("What do you recommend?"). It sounds like one long word when spoken quickly ("kess-ke"). Just memorize it as a fixed opener rather than analyzing the grammar.',
+    keywords: ['qu\'est-ce que', 'quest ce que', 'kesse', 'what question'],
+  },
+  {
     id: 'comment-allez-vous-ca-va',
     question: '"Comment allez-vous ?" vs "Ça va ?" — what\'s the difference?',
     answer:
