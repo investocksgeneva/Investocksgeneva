@@ -522,4 +522,124 @@ export const week3: Week = {
   ],
 }
 
-export const weeks: Week[] = [week1, week2, week3]
+export const week4: Week = {
+  id: 4,
+  title: 'Week 4: Small talk',
+  goal:
+    'Hold a two-minute casual conversation — introduce yourself, chat about the weather, and make a simple plan to meet again.',
+  sessions: [
+    {
+      id: 1,
+      title: 'Introducing yourself',
+      subtitle: "Qui êtes-vous ?",
+      kind: 'phrases',
+      corePhrases: [
+        { fr: "D'où venez-vous ?", en: 'Where are you from?' },
+        { fr: 'Je viens de…', en: 'I come from…' },
+        { fr: 'Vous habitez où ?', en: 'Where do you live?' },
+        { fr: "J'habite à Genève", en: 'I live in Geneva' },
+        { fr: 'Vous faites quoi dans la vie ?', en: 'What do you do (for a living)?' },
+        { fr: 'Je suis…', en: 'I am (a)…' },
+        { fr: 'Depuis combien de temps êtes-vous ici ?', en: 'How long have you been here?' },
+        { fr: 'Depuis…', en: 'Since… / For…' },
+      ],
+      grammarSeed:
+        'When stating a profession with "être", French drops the article: "Je suis professeur", not "Je suis un professeur". The article comes back if you add a description: "Je suis un bon professeur."',
+      dialogue: [
+        { speaker: 'A', fr: "D'où venez-vous ?", en: 'Where are you from?' },
+        { speaker: 'B', fr: 'Je viens du Canada, et vous ?', en: "I'm from Canada, and you?" },
+        {
+          speaker: 'A',
+          fr: "Moi, je viens de Genève. Vous êtes ici depuis combien de temps ?",
+          en: "I'm from Geneva. How long have you been here?",
+        },
+        { speaker: 'B', fr: 'Depuis six mois.', en: 'For six months.' },
+      ],
+      drill: 'Introduce yourself out loud in 30 seconds: your name, where you\'re from, where you live, and what you do.',
+    },
+    {
+      id: 2,
+      title: 'Weather & small talk fillers',
+      subtitle: 'Quel temps !',
+      kind: 'phrases',
+      corePhrases: [
+        { fr: 'Il fait beau', en: "It's nice out" },
+        { fr: 'Il fait froid', en: "It's cold" },
+        { fr: 'Il pleut', en: "It's raining" },
+        { fr: 'Quel temps !', en: 'What weather!' },
+        { fr: 'Ah bon ?', en: 'Oh really?' },
+        { fr: 'Vraiment ?', en: 'Really?' },
+        { fr: 'Tant mieux', en: 'So much the better / good' },
+        { fr: 'Dommage', en: 'Too bad / a shame' },
+      ],
+      grammarSeed:
+        'Weather is the universal small-talk opener — and Geneva\'s weather changes fast, so you\'ll get plenty of practice. These little reaction words ("Ah bon ?", "Vraiment ?", "Dommage") are what actually keep a conversation flowing, more than any grammar rule.',
+      dialogue: [
+        { speaker: 'A', fr: "Quel temps aujourd'hui, il pleut encore !", en: 'What weather today, it\'s raining again!' },
+        { speaker: 'B', fr: 'Ah bon ? Il faisait beau ce matin.', en: 'Oh really? It was nice this morning.' },
+        { speaker: 'A', fr: 'Dommage, j\'espérais sortir.', en: 'Too bad, I was hoping to go out.' },
+      ],
+      drill: 'Comment on today\'s actual weather out loud, then react to an imaginary reply with two different filler words.',
+    },
+    {
+      id: 3,
+      title: 'Making plans',
+      subtitle: 'On se voit quand ?',
+      kind: 'transaction',
+      useCases: [
+        { phrase: 'On se voit quand ?', use: 'proposing to meet' },
+        { phrase: 'Vous êtes libre… ?', use: 'checking availability' },
+        { phrase: 'Ça vous dit de… ?', use: 'suggesting an activity' },
+        { phrase: 'Avec plaisir', use: 'accepting warmly' },
+        { phrase: 'Une autre fois peut-être', use: 'politely declining' },
+        { phrase: 'À bientôt', use: 'signing off, expecting to meet again' },
+      ],
+      dialogue: [
+        { speaker: 'A', fr: 'Ça vous dit de prendre un café samedi ?', en: 'Would you like to grab a coffee on Saturday?' },
+        { speaker: 'B', fr: 'Avec plaisir ! Vous êtes libre à quelle heure ?', en: 'Gladly! What time are you free?' },
+        { speaker: 'A', fr: 'Vers dix heures ?', en: 'Around ten?' },
+        { speaker: 'B', fr: "Parfait, à samedi !", en: 'Perfect, see you Saturday!' },
+      ],
+      drill: 'Propose meeting up three different ways, then practice one polite decline ("Une autre fois peut-être").',
+    },
+    {
+      id: 4,
+      title: 'Consolidation & role-play',
+      subtitle: 'Checkpoint: meeting someone new',
+      kind: 'roleplay',
+      drill:
+        'Combine Sessions 1–3 into one unscripted role-play: meet someone new, introduce yourself, chat about the weather, and propose a plan to meet again. This is Week 4\'s checkpoint.',
+      roleplaySteps: [
+        { title: 'Greet & introduce yourself', hint: 'Bonjour, je m\'appelle… Je viens de…' },
+        { title: 'Ask about them', hint: 'Vous habitez où ? Vous faites quoi dans la vie ?' },
+        { title: 'Comment on the weather', hint: 'Quel temps aujourd\'hui !' },
+        { title: 'Propose a plan', hint: 'Ça vous dit de… ? On se voit quand ?' },
+        { title: 'Confirm and say goodbye', hint: 'Avec plaisir, à bientôt !' },
+      ],
+    },
+  ],
+  vocab: [
+    { fr: "d'où", en: 'from where' },
+    { fr: 'venir', en: 'to come' },
+    { fr: 'habiter', en: 'to live (reside)' },
+    { fr: 'la vie', en: 'life' },
+    { fr: 'depuis', en: 'since / for (duration)' },
+    { fr: 'il fait beau', en: "it's nice out" },
+    { fr: 'il pleut', en: "it's raining" },
+    { fr: 'froid', en: 'cold' },
+    { fr: 'chaud', en: 'hot/warm' },
+    { fr: 'vraiment', en: 'really' },
+    { fr: 'dommage', en: 'too bad / a shame' },
+    { fr: 'tant mieux', en: 'so much the better' },
+    { fr: 'libre', en: 'free (available)' },
+    { fr: 'avec plaisir', en: 'gladly' },
+    { fr: 'à bientôt', en: 'see you soon' },
+    { fr: 'une autre fois', en: 'another time' },
+    { fr: 'ça vous dit', en: 'does that appeal to you' },
+    { fr: 'le temps', en: 'the weather' },
+    { fr: 'un rendez-vous', en: 'an appointment / meetup' },
+    { fr: 'peut-être', en: 'maybe' },
+  ],
+}
+
+export const weeks: Week[] = [week1, week2, week3, week4]

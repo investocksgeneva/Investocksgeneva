@@ -26,9 +26,15 @@ export function matchFaq(query: string): FaqEntry[] {
 
     let score = 0
     for (const word of queryWords) {
+      // An exact match against a curated keyword always counts, even if the
+      // word is also a common English stopword (e.g. "on" is both a French
+      // grammar word we teach and an English preposition we'd otherwise skip).
+      if (keywordHaystack.some((k) => k === word)) {
+        score += 3
+        continue
+      }
       if (STOP_WORDS.has(word)) continue
-      if (keywordHaystack.some((k) => k === word)) score += 3
-      else if (haystack.includes(word)) score += 1
+      if (haystack.includes(word)) score += 1
     }
     // Bonus for exact multi-word keyword phrases appearing in the query
     for (const keyword of keywordHaystack) {

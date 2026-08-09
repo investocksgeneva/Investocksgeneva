@@ -161,4 +161,25 @@ export const faq: FaqEntry[] = [
       '"Comment allez-vous ?" is the full, formal way to ask "How are you?" and pairs with "vous". "Ça va ?" is a casual shortcut used with people you know or in relaxed settings, and the reply is often just "Ça va" (I\'m fine / it\'s going okay). For strangers and transactions, stick with "Comment allez-vous ?".',
     keywords: ['comment allez-vous', 'ça va', 'how are you'],
   },
+  {
+    id: 'profession-no-article',
+    question: 'Why is it "Je suis professeur" and not "Je suis un professeur"?',
+    answer:
+      'French drops the article ("un/une") before a profession, nationality, or religion used with "être" — "Je suis professeur", "Je suis suisse". The article comes back as soon as you add a description: "Je suis un bon professeur" ("I am a good teacher"). This trips up a lot of English speakers since English always keeps the "a".',
+    keywords: ['je suis professeur', 'profession', 'article', 'un professeur', 'job', 'occupation'],
+  },
+  {
+    id: 'on-meaning',
+    question: 'What does "on" mean?',
+    answer:
+      '"On" is an all-purpose informal subject pronoun that usually means "we" in everyday spoken French — "On se voit quand ?" = "When shall we meet?". It technically means "one/people in general" (like formal English "one does..."), but in casual conversation it has mostly replaced "nous". Conjugate the verb as "il/elle" (on va, on fait, on voit).',
+    keywords: ['on', 'on se voit', 'nous', 'we', 'on meaning'],
+  },
+  {
+    id: 'depuis-usage',
+    question: 'How does "depuis" work for talking about time?',
+    answer:
+      '"Depuis" means "since" or "for", used with a present-tense verb to describe something that started in the past and is still true now — "J\'habite ici depuis six mois" ("I\'ve been living here for six months", and I still do). English switches to "have been -ing"; French just stays in the present tense with "depuis".',
+    keywords: ['depuis', 'since', 'for', 'duration', 'depuis combien de temps'],
+  },
 ]
