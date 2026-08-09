@@ -8,7 +8,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Articulations" />
 <link rel="manifest" href="/manifest.json" />
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%236c5ce7%22/><text x=%2250%22 y=%2266%22 font-size=%2255%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22sans-serif%22>A</text></svg>" />
+<link rel="icon" href="/icons/icon-192.png" />
+<link rel="apple-touch-icon" href="/icons/icon-180.png" />
 <title>Articulations</title>
 <link rel="stylesheet" href="/styles.css" />
 </head>
@@ -27,7 +28,17 @@
   <section id="setupScreen" class="screen">
     <p class="intro">Describe the conversation you need to have. Claude will play the other person so you can rehearse it — by typing or, on supported browsers, out loud with the mic button.</p>
 
+    <div id="savedScenarios" class="saved-scenarios" hidden>
+      <h2>Saved scenarios</h2>
+      <div id="savedScenariosList"></div>
+    </div>
+
     <form id="setupForm">
+      <div id="lastTimeNote" class="last-time-note" hidden></div>
+
+      <label for="scenarioName">Name this scenario, to save it for reuse <span class="optional">(optional)</span></label>
+      <input type="text" id="scenarioName" placeholder="e.g. Dishes with Sam" />
+
       <label for="situation">What's the situation?</label>
       <textarea id="situation" required placeholder="e.g. I need to tell my roommate to stop leaving dishes in the sink for days. We've had this conversation before and it didn't go well."></textarea>
 
@@ -59,7 +70,10 @@
       <textarea id="chatInput" placeholder="Say your line…" rows="1" required></textarea>
       <button type="submit" class="send-btn" aria-label="Send">➤</button>
     </form>
-    <button id="endBtn" class="ghost-btn end-btn">End conversation &amp; get feedback</button>
+    <div class="chat-actions">
+      <button id="retryBtn" class="ghost-btn" hidden>↺ Retry last line</button>
+      <button id="endBtn" class="ghost-btn end-btn">End conversation &amp; get feedback</button>
+    </div>
   </section>
 </main>
 

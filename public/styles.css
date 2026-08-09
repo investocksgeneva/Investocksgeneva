@@ -108,7 +108,8 @@ main {
 }
 
 #setupForm textarea,
-#setupForm select {
+#setupForm select,
+#setupForm input[type="text"] {
   background: var(--panel);
   border: 1px solid var(--border);
   color: var(--text);
@@ -120,15 +121,90 @@ main {
   min-height: 64px;
 }
 
-#setupForm select {
+#setupForm select,
+#setupForm input[type="text"] {
   min-height: auto;
 }
 
 #setupForm textarea:focus,
 #setupForm select:focus,
+#setupForm input[type="text"]:focus,
 .chat-input-row textarea:focus {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+/* Saved scenarios */
+.saved-scenarios {
+  margin-bottom: 22px;
+}
+
+.saved-scenarios h2 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
+.saved-scenario-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.saved-scenario-item .info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.saved-scenario-item .name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-scenario-item .last-practiced {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.saved-scenario-item button {
+  flex: 0 0 auto;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.saved-scenario-item button.delete-btn {
+  color: #ff7675;
+  border-color: transparent;
+}
+
+.last-time-note {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.last-time-note strong {
+  color: var(--text);
 }
 
 .primary-btn {
@@ -258,8 +334,16 @@ main {
   50% { box-shadow: 0 0 0 8px rgba(214, 48, 49, 0); }
 }
 
-.end-btn {
+.chat-actions {
+  display: flex;
+  gap: 8px;
   margin: 4px 12px calc(12px + env(safe-area-inset-bottom));
+}
+
+.chat-actions .end-btn,
+.chat-actions #retryBtn {
+  flex: 1 1 auto;
+  margin: 0;
 }
 
 .feedback-panel {
