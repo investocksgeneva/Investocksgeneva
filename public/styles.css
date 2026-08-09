@@ -78,6 +78,10 @@ main {
   width: 100%;
 }
 
+.screen[hidden] {
+  display: none;
+}
+
 /* Setup screen */
 #setupScreen {
   padding: 20px 16px calc(24px + env(safe-area-inset-bottom));
