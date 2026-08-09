@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#14141a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Articulations" />
+<link rel="manifest" href="/manifest.json" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%236c5ce7%22/><text x=%2250%22 y=%2266%22 font-size=%2255%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22sans-serif%22>A</text></svg>" />
+<title>Articulations</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <h1>Articulations</h1>
+  <button id="newScenarioBtn" class="ghost-btn" hidden>New scenario</button>
+</header>
+
+<main>
+  <!-- SETUP SCREEN -->
+  <section id="setupScreen" class="screen">
+    <p class="intro">Describe the conversation you need to have. Claude will play the other person so you can rehearse it.</p>
+
+    <form id="setupForm">
+      <label for="situation">What's the situation?</label>
+      <textarea id="situation" required placeholder="e.g. I need to tell my roommate to stop leaving dishes in the sink for days. We've had this conversation before and it didn't go well."></textarea>
+
+      <label for="otherPerson">Who are you talking to, and how do they tend to react?</label>
+      <textarea id="otherPerson" required placeholder="e.g. My roommate Sam. Gets defensive fast, deflects blame onto me, sometimes goes quiet and sulky instead of engaging."></textarea>
+
+      <label for="yourGoal">What do you want out of this conversation? <span class="optional">(optional)</span></label>
+      <textarea id="yourGoal" placeholder="e.g. Get a real agreement on a dish schedule, without it turning into a blowup."></textarea>
+
+      <label for="difficulty">How resistant should they be? <span class="optional">(optional)</span></label>
+      <select id="difficulty">
+        <option value="">Realistic (default)</option>
+        <option value="Go easy on the user — be fairly agreeable and cooperative.">Easier than usual</option>
+        <option value="Realistic — react the way this person actually would, not artificially easy or artificially hostile.">Realistic</option>
+        <option value="Be quite resistant and difficult — this is a hard version of this person to practice against.">Harder than usual</option>
+      </select>
+
+      <button type="submit" class="primary-btn">Start rehearsal</button>
+    </form>
+  </section>
+
+  <!-- CHAT SCREEN -->
+  <section id="chatScreen" class="screen" hidden>
+    <div id="messages" class="messages"></div>
+    <div id="feedbackPanel" class="feedback-panel" hidden></div>
+
+    <form id="chatForm" class="chat-input-row">
+      <textarea id="chatInput" placeholder="Say your line…" rows="1" required></textarea>
+      <button type="submit" class="send-btn" aria-label="Send">➤</button>
+    </form>
+    <button id="endBtn" class="ghost-btn end-btn">End conversation &amp; get feedback</button>
+  </section>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>
