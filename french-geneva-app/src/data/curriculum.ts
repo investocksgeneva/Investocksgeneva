@@ -642,4 +642,126 @@ export const week4: Week = {
   ],
 }
 
-export const weeks: Week[] = [week1, week2, week3, week4]
+export const week5: Week = {
+  id: 5,
+  title: 'Week 5: Health & pharmacy',
+  goal:
+    'Describe a minor ailment, get advice from a pharmacist, and book a doctor\'s appointment if it\'s serious — entirely in French.',
+  sessions: [
+    {
+      id: 1,
+      title: 'Describing symptoms',
+      subtitle: "J'ai mal à…",
+      kind: 'phrases',
+      corePhrases: [
+        { fr: "J'ai mal à la tête", en: 'I have a headache' },
+        { fr: "J'ai mal au ventre", en: 'I have a stomach ache' },
+        { fr: "J'ai mal à la gorge", en: 'I have a sore throat' },
+        { fr: "J'ai mal au dos", en: 'I have a backache' },
+        { fr: 'Je ne me sens pas bien', en: "I don't feel well" },
+        { fr: "J'ai de la fièvre", en: 'I have a fever' },
+        { fr: 'Je suis malade', en: "I'm sick" },
+        { fr: 'Je tousse', en: "I'm coughing" },
+      ],
+      grammarSeed:
+        '"Avoir mal à" ("to hurt/have pain at") always contracts with the body part\'s article: à + le → au (au ventre), à + la stays à la (à la tête), à + les → aux. It\'s the same au/à la contraction you\'ll start noticing everywhere once you know to listen for it.',
+      dialogue: [
+        { speaker: 'A', fr: 'Ça va ? Vous avez mauvaise mine.', en: "You okay? You don't look well." },
+        { speaker: 'B', fr: 'Non, j\'ai mal à la tête et j\'ai de la fièvre.', en: 'No, I have a headache and a fever.' },
+        { speaker: 'A', fr: 'Allez voir un pharmacien.', en: 'Go see a pharmacist.' },
+      ],
+      drill: 'Describe three different aches out loud, using "j\'ai mal à/au/à la…" for each.',
+    },
+    {
+      id: 2,
+      title: 'At the pharmacy',
+      subtitle: 'Getting advice & medicine',
+      kind: 'transaction',
+      useCases: [
+        { phrase: 'Avez-vous quelque chose pour… ?', use: 'asking for a recommendation' },
+        { phrase: 'Je voudrais un médicament pour…', use: 'asking for medicine directly' },
+        { phrase: 'C\'est pour un adulte ou un enfant ?', use: 'the pharmacist confirming who it\'s for' },
+        { phrase: 'Combien de fois par jour ?', use: 'asking the dosage frequency' },
+        { phrase: 'Est-ce dangereux avec… ?', use: 'checking for interactions' },
+      ],
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: 'Bonjour, avez-vous quelque chose pour un mal de tête ?',
+          en: 'Hello, do you have something for a headache?',
+        },
+        {
+          speaker: 'B',
+          fr: 'Oui, voilà. Un comprimé, trois fois par jour.',
+          en: 'Yes, here you go. One tablet, three times a day.',
+        },
+        { speaker: 'A', fr: 'Merci beaucoup.', en: 'Thank you very much.' },
+      ],
+      drill: 'Ask a pharmacist for medicine for three different ailments (headache, cough, sore throat).',
+    },
+    {
+      id: 3,
+      title: "Booking a doctor's visit",
+      subtitle: 'Prendre rendez-vous',
+      kind: 'transaction',
+      useCases: [
+        { phrase: 'Je voudrais prendre rendez-vous.', use: 'requesting an appointment' },
+        { phrase: 'Vous êtes libre quand ?', use: 'asking about your availability' },
+        { phrase: "C'est urgent.", use: 'flagging urgency' },
+        { phrase: 'Avez-vous une assurance maladie ?', use: 'the clinic asking about insurance' },
+        { phrase: "Le cabinet est ouvert jusqu'à quelle heure ?", use: 'checking clinic hours' },
+      ],
+      grammarSeed:
+        'This recombines Week 3\'s hours/days phrases and Week 4\'s meeting-up phrases into a new context — that\'s deliberate. Real fluency is mostly old vocabulary showing up in new situations, not an endless stream of new words.',
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: 'Bonjour, je voudrais prendre rendez-vous, c\'est assez urgent.',
+          en: 'Hello, I\'d like to make an appointment, it\'s fairly urgent.',
+        },
+        { speaker: 'B', fr: 'Vous êtes libre demain matin ?', en: 'Are you free tomorrow morning?' },
+        { speaker: 'A', fr: 'Oui, ça marche. Merci.', en: 'Yes, that works. Thanks.' },
+      ],
+      drill: 'Call and book an appointment out loud: state the reason, agree on a time, thank them.',
+    },
+    {
+      id: 4,
+      title: 'Consolidation & role-play',
+      subtitle: 'Checkpoint: a sick day',
+      kind: 'roleplay',
+      drill:
+        'Combine Sessions 1–3 into one unscripted role-play: you wake up unwell, describe your symptoms, decide whether to see a pharmacist or book a doctor, and follow through. This is Week 5\'s checkpoint.',
+      roleplaySteps: [
+        { title: 'Describe how you feel', hint: 'Je ne me sens pas bien. J\'ai mal à…' },
+        { title: 'Ask the pharmacist for help', hint: 'Avez-vous quelque chose pour… ?' },
+        { title: 'Confirm the dosage', hint: 'Combien de fois par jour ?' },
+        { title: 'If it\'s serious, book a doctor', hint: 'Je voudrais prendre rendez-vous, c\'est urgent.' },
+        { title: 'Thank and finish', hint: 'Merci beaucoup, au revoir !' },
+      ],
+    },
+  ],
+  vocab: [
+    { fr: "j'ai mal à", en: 'I have pain at/in' },
+    { fr: 'la tête', en: 'the head' },
+    { fr: 'le ventre', en: 'the stomach' },
+    { fr: 'la gorge', en: 'the throat' },
+    { fr: 'le dos', en: 'the back' },
+    { fr: 'la fièvre', en: 'fever' },
+    { fr: 'malade', en: 'sick' },
+    { fr: 'tousser', en: 'to cough' },
+    { fr: 'un médicament', en: 'a medicine' },
+    { fr: 'une pharmacie', en: 'a pharmacy' },
+    { fr: 'un cabinet médical', en: "a doctor's office" },
+    { fr: 'un médecin', en: 'a doctor' },
+    { fr: 'un rendez-vous', en: 'an appointment' },
+    { fr: 'urgent', en: 'urgent' },
+    { fr: 'une assurance maladie', en: 'health insurance' },
+    { fr: 'quelque chose pour', en: 'something for' },
+    { fr: 'une ordonnance', en: 'a prescription' },
+    { fr: 'guérir', en: 'to heal / get better' },
+    { fr: 'se sentir', en: 'to feel' },
+    { fr: 'un comprimé', en: 'a tablet/pill' },
+  ],
+}
+
+export const weeks: Week[] = [week1, week2, week3, week4, week5]

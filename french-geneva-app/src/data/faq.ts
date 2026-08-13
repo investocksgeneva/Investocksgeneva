@@ -182,4 +182,18 @@ export const faq: FaqEntry[] = [
       '"Depuis" means "since" or "for", used with a present-tense verb to describe something that started in the past and is still true now — "J\'habite ici depuis six mois" ("I\'ve been living here for six months", and I still do). English switches to "have been -ing"; French just stays in the present tense with "depuis".',
     keywords: ['depuis', 'since', 'for', 'duration', 'depuis combien de temps'],
   },
+  {
+    id: 'au-a-la',
+    question: 'What\'s the difference between "au" and "à la"?',
+    answer:
+      '"Au" is just "à + le" glued together for masculine nouns — you\'ll never say "à le". "À la" is used as-is for feminine nouns, and "à + les" becomes "aux" for plurals. It shows up constantly in "avoir mal à" (j\'ai mal au dos vs. j\'ai mal à la tête) — same gender rule as un/une, just fused with "à".',
+    keywords: ['au', 'à la', 'aux', 'a le', 'contraction', 'avoir mal'],
+  },
+  {
+    id: 'avoir-mal-a',
+    question: 'How does "avoir mal à" work?',
+    answer:
+      '"Avoir mal à" literally means "to have pain at" — you say "j\'ai mal à" plus the body part with its article: "j\'ai mal au ventre" (stomach), "j\'ai mal à la tête" (head), "j\'ai mal aux dents" (teeth, plural). It\'s the standard way to describe any ache in French — much more common than a separate verb for each type of pain.',
+    keywords: ['avoir mal', 'j\'ai mal', 'pain', 'ache', 'hurt', 'symptoms'],
+  },
 ]
