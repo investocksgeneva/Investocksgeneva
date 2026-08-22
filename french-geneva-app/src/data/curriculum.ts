@@ -764,4 +764,138 @@ export const week5: Week = {
   ],
 }
 
-export const weeks: Week[] = [week1, week2, week3, week4, week5]
+export const week6: Week = {
+  id: 6,
+  title: 'Week 6: Housing & settling in',
+  goal:
+    'View an apartment, discuss the basics with a landlord, report a problem, and set up utilities — entirely in French.',
+  sessions: [
+    {
+      id: 1,
+      title: 'Apartment viewing',
+      subtitle: 'Je cherche un appartement',
+      kind: 'phrases',
+      corePhrases: [
+        { fr: 'Je cherche un appartement', en: "I'm looking for an apartment" },
+        { fr: 'un studio', en: 'a studio' },
+        { fr: 'Combien de pièces ?', en: 'How many rooms?' },
+        { fr: "C'est meublé ou non meublé ?", en: 'Is it furnished or unfurnished?' },
+        { fr: 'Le loyer, c\'est combien par mois ?', en: 'How much is the rent per month?' },
+        { fr: 'Les charges sont comprises ?', en: 'Are utilities included?' },
+        { fr: 'C\'est disponible quand ?', en: 'When is it available?' },
+      ],
+      grammarSeed:
+        '"Combien de" + a noun asks "how many/much of something" — combien de pièces (how many rooms), combien de temps (how much time). It\'s the same "combien" from Week 1\'s "c\'est combien ?", just paired with a noun instead of standing alone.',
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: 'Bonjour, je cherche un appartement. Combien de pièces ?',
+          en: "Hello, I'm looking at the apartment. How many rooms?",
+        },
+        {
+          speaker: 'B',
+          fr: 'Trois pièces, non meublé. Le loyer est de 1800 francs, charges comprises.',
+          en: '3 rooms, unfurnished. Rent is 1800 francs, utilities included.',
+        },
+        { speaker: 'A', fr: "C'est disponible quand ?", en: 'When is it available?' },
+        { speaker: 'B', fr: 'Dès le premier du mois.', en: 'From the 1st of the month.' },
+      ],
+      drill: 'Ask three questions about an apartment out loud: rooms, rent, and availability.',
+    },
+    {
+      id: 2,
+      title: 'Talking to the landlord',
+      subtitle: 'Signaler un problème',
+      kind: 'transaction',
+      useCases: [
+        { phrase: 'Je voudrais signer le contrat.', use: 'agreeing to a lease' },
+        { phrase: 'Il y a un problème avec…', use: 'reporting an issue' },
+        { phrase: 'Le chauffage ne marche pas.', use: 'reporting the heating is broken' },
+        { phrase: 'Pouvez-vous réparer… ?', use: 'asking for a repair' },
+        { phrase: 'Merci de votre compréhension.', use: 'a polite sign-off after a complaint' },
+      ],
+      grammarSeed:
+        '"Il y a" means "there is / there are" — one fixed phrase for both singular and plural. "Il y a un problème" (there\'s a problem), "il y a des charges" (there are fees). You\'ll use it constantly once you notice it.',
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: 'Bonjour, il y a un problème : le chauffage ne marche pas.',
+          en: "Hello, there's a problem: the heating isn't working.",
+        },
+        {
+          speaker: 'B',
+          fr: "D'accord, je viens réparer ça demain.",
+          en: "Okay, I'll come fix that tomorrow.",
+        },
+        { speaker: 'A', fr: 'Merci de votre compréhension.', en: 'Thanks for your understanding.' },
+      ],
+      drill: 'Report two different problems in an apartment out loud (heating, water, a lock — pick two).',
+    },
+    {
+      id: 3,
+      title: 'Utilities & internet',
+      subtitle: "S'abonner",
+      kind: 'transaction',
+      useCases: [
+        { phrase: "Je voudrais m'abonner à…", use: 'signing up for a service' },
+        { phrase: 'Quand est-ce que ça sera installé ?', use: 'asking about install timing' },
+        { phrase: "J'ai besoin d'une connexion internet.", use: 'stating what you need' },
+        { phrase: 'un formulaire à remplir', use: 'a form to fill out' },
+        { phrase: "le compteur d'électricité", use: 'the electricity meter' },
+      ],
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: "Bonjour, je voudrais m'abonner à internet pour mon nouvel appartement.",
+          en: "Hello, I'd like to sign up for internet for my new apartment.",
+        },
+        {
+          speaker: 'B',
+          fr: 'Bien sûr. Quand est-ce que ça sera installé ? On peut faire vendredi.',
+          en: 'Of course — when should it be installed? We can do Friday.',
+        },
+        { speaker: 'A', fr: 'Parfait, merci.', en: 'Perfect, thanks.' },
+      ],
+      drill: 'Call and set up one utility out loud: state what you need, agree on a date, thank them.',
+    },
+    {
+      id: 4,
+      title: 'Consolidation & role-play',
+      subtitle: 'Checkpoint: moving in',
+      kind: 'roleplay',
+      drill:
+        'Combine Sessions 1–3 into one unscripted role-play: view an apartment, ask about rent and charges, report an issue once moved in, and set up internet. This is Week 6\'s checkpoint.',
+      roleplaySteps: [
+        { title: 'Ask about the apartment', hint: 'Combien de pièces ? C\'est meublé ?' },
+        { title: 'Ask about rent and charges', hint: 'Le loyer, c\'est combien ? Les charges sont comprises ?' },
+        { title: 'Report an issue', hint: 'Il y a un problème avec… Pouvez-vous réparer… ?' },
+        { title: 'Set up internet', hint: 'Je voudrais m\'abonner à internet.' },
+        { title: 'Thank and confirm', hint: 'Merci beaucoup, à bientôt !' },
+      ],
+    },
+  ],
+  vocab: [
+    { fr: 'un appartement', en: 'an apartment' },
+    { fr: 'un studio', en: 'a studio apartment' },
+    { fr: 'une pièce', en: 'a room' },
+    { fr: 'le loyer', en: 'the rent' },
+    { fr: 'les charges', en: 'utilities/fees' },
+    { fr: 'meublé', en: 'furnished' },
+    { fr: 'disponible', en: 'available' },
+    { fr: 'signer', en: 'to sign' },
+    { fr: 'un contrat', en: 'a contract' },
+    { fr: 'réparer', en: 'to fix/repair' },
+    { fr: 'le chauffage', en: 'the heating' },
+    { fr: 'un problème', en: 'a problem' },
+    { fr: "s'abonner", en: 'to subscribe / sign up' },
+    { fr: 'une connexion', en: 'a connection' },
+    { fr: 'un formulaire', en: 'a form' },
+    { fr: 'le compteur', en: 'the meter' },
+    { fr: "l'électricité", en: 'electricity' },
+    { fr: 'un locataire', en: 'a tenant' },
+    { fr: 'un propriétaire', en: 'a landlord/owner' },
+    { fr: 'un concierge', en: 'a building caretaker' },
+  ],
+}
+
+export const weeks: Week[] = [week1, week2, week3, week4, week5, week6]

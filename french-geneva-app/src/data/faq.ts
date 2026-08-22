@@ -196,4 +196,18 @@ export const faq: FaqEntry[] = [
       '"Avoir mal à" literally means "to have pain at" — you say "j\'ai mal à" plus the body part with its article: "j\'ai mal au ventre" (stomach), "j\'ai mal à la tête" (head), "j\'ai mal aux dents" (teeth, plural). It\'s the standard way to describe any ache in French — much more common than a separate verb for each type of pain.',
     keywords: ['avoir mal', 'j\'ai mal', 'pain', 'ache', 'hurt', 'symptoms'],
   },
+  {
+    id: 'combien-de-noun',
+    question: 'How is "combien de" different from just "combien" ?',
+    answer:
+      '"Combien" alone asks "how much" in general, usually about price ("C\'est combien ?"). "Combien de" + a noun asks "how many/much of that specific thing" — "combien de pièces ?" (how many rooms), "combien de temps ?" (how much time). Same word, just paired up when you\'re asking about a specific noun rather than a price in isolation.',
+    keywords: ['combien de', 'combien', 'how many', 'how much', 'pieces'],
+  },
+  {
+    id: 'il-y-a',
+    question: 'What does "il y a" mean?',
+    answer:
+      '"Il y a" means "there is" or "there are" — the same fixed phrase works for both singular and plural, so you never conjugate it differently. "Il y a un problème" (there\'s a problem), "il y a des charges" (there are fees). It also means "ago" with time expressions ("il y a six mois" = six months ago), but the "there is/are" sense is the one you\'ll use constantly.',
+    keywords: ['il y a', 'there is', 'there are', 'ily a'],
+  },
 ]
