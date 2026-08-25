@@ -210,4 +210,18 @@ export const faq: FaqEntry[] = [
       '"Il y a" means "there is" or "there are" — the same fixed phrase works for both singular and plural, so you never conjugate it differently. "Il y a un problème" (there\'s a problem), "il y a des charges" (there are fees). It also means "ago" with time expressions ("il y a six mois" = six months ago), but the "there is/are" sense is the one you\'ll use constantly.',
     keywords: ['il y a', 'there is', 'there are', 'ily a'],
   },
+  {
+    id: 'il-faut',
+    question: 'What does "il faut" mean?',
+    answer:
+      '"Il faut" means "one must / it\'s necessary to" — like "il y a", it\'s a fixed impersonal phrase that never changes to match a person. "Il faut remplir un formulaire" (you need to fill out a form), "il faut deux documents" (two documents are needed). Follow it with either an infinitive verb or a noun.',
+    keywords: ['il faut', 'must', 'necessary', 'need to', 'have to'],
+  },
+  {
+    id: 'imperative-vous',
+    question: 'Why do instructions say "remplissez" or "signez" instead of "vous remplissez"?',
+    answer:
+      'That\'s the imperative (command) form — used for instructions, requests, and official forms. For "vous", you just drop "vous" and keep the verb ending: "vous remplissez" → "remplissez !" (fill out!), "vous signez" → "signez !" (sign!). It\'s how forms, signs, and polite requests give commands in French.',
+    keywords: ['remplissez', 'signez', 'cochez', 'imperative', 'command form'],
+  },
 ]

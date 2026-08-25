@@ -898,4 +898,134 @@ export const week6: Week = {
   ],
 }
 
-export const weeks: Week[] = [week1, week2, week3, week4, week5, week6]
+export const week7: Week = {
+  id: 7,
+  title: 'Week 7: Banking & post office',
+  goal:
+    'Open a bank account, send a package at the post office, and fill out a basic form — entirely in French.',
+  sessions: [
+    {
+      id: 1,
+      title: 'At the bank',
+      subtitle: 'Ouvrir un compte',
+      kind: 'phrases',
+      corePhrases: [
+        { fr: 'Je voudrais ouvrir un compte.', en: 'I would like to open an account.' },
+        { fr: 'un compte bancaire', en: 'a bank account' },
+        { fr: 'un compte d\'épargne', en: 'a savings account' },
+        { fr: 'une carte de crédit', en: 'a credit card' },
+        { fr: 'Quels documents faut-il ?', en: 'What documents are needed?' },
+        { fr: 'Il y a des frais mensuels ?', en: 'Are there monthly fees?' },
+      ],
+      grammarSeed:
+        '"Il faut" + a verb means "one must / it\'s necessary to" — a fixed impersonal phrase like "il y a", never conjugated to match a person. "Il faut remplir un formulaire" (you need to fill out a form), "il faut deux documents" (two documents are needed).',
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: 'Bonjour, je voudrais ouvrir un compte bancaire.',
+          en: "Hello, I'd like to open a bank account.",
+        },
+        {
+          speaker: 'B',
+          fr: 'Bien sûr. Il faut une pièce d\'identité et un justificatif de domicile.',
+          en: 'Of course. You\'ll need an ID and proof of address.',
+        },
+        { speaker: 'A', fr: 'Il y a des frais mensuels ?', en: 'Are there monthly fees?' },
+        { speaker: 'B', fr: 'Non, ce compte est gratuit.', en: "No, this account is free." },
+      ],
+      drill: 'Ask three questions about opening a bank account out loud.',
+    },
+    {
+      id: 2,
+      title: 'At the post office',
+      subtitle: 'La Poste',
+      kind: 'transaction',
+      useCases: [
+        { phrase: 'Je voudrais envoyer un colis.', use: 'sending a package' },
+        { phrase: 'une lettre', use: 'a letter' },
+        { phrase: "Combien coûte l'envoi ?", use: 'asking the shipping cost' },
+        { phrase: 'Il faut combien de jours ?', use: 'asking how many days it takes' },
+        { phrase: 'Un timbre, s\'il vous plaît.', use: 'buying a stamp' },
+      ],
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: 'Bonjour, je voudrais envoyer ce colis en France.',
+          en: 'Hello, I\'d like to send this package to France.',
+        },
+        {
+          speaker: 'B',
+          fr: "Ça fait douze francs. Il faut deux jours.",
+          en: "That's twelve francs. It takes two days.",
+        },
+        { speaker: 'A', fr: "Parfait, merci.", en: 'Perfect, thanks.' },
+      ],
+      drill: 'Practice sending a package and asking about delivery time, start to finish.',
+    },
+    {
+      id: 3,
+      title: 'Filling out forms',
+      subtitle: 'Remplir un formulaire',
+      kind: 'phrases',
+      corePhrases: [
+        { fr: 'Remplissez ce formulaire.', en: 'Fill out this form.' },
+        { fr: 'Signez ici.', en: 'Sign here.' },
+        { fr: 'Votre nom et prénom', en: 'Your last name and first name' },
+        { fr: 'Votre date de naissance', en: 'Your date of birth' },
+        { fr: 'Votre adresse', en: 'Your address' },
+        { fr: 'Cochez la case.', en: 'Check the box.' },
+      ],
+      grammarSeed:
+        '"Remplissez", "signez", "cochez" are imperatives — commands built from the "vous" form of the verb, minus "vous" itself. It\'s how instructions and official forms talk to you, and how you\'d politely instruct someone back.',
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: 'Remplissez ce formulaire, s\'il vous plaît : nom, prénom, et date de naissance.',
+          en: 'Please fill out this form: last name, first name, and date of birth.',
+        },
+        { speaker: 'B', fr: "D'accord, et je signe où ?", en: 'Okay, and where do I sign?' },
+        { speaker: 'A', fr: 'Signez ici, et cochez cette case.', en: 'Sign here, and check this box.' },
+      ],
+      drill: 'Read a mock form aloud field by field: nom, prénom, date de naissance, adresse.',
+    },
+    {
+      id: 4,
+      title: 'Consolidation & role-play',
+      subtitle: 'Checkpoint: errands day',
+      kind: 'roleplay',
+      drill:
+        'Combine Sessions 1–3 into one unscripted role-play: open a bank account, send a package at the post office, and fill out a form along the way. This is Week 7\'s checkpoint.',
+      roleplaySteps: [
+        { title: 'Ask to open an account', hint: 'Je voudrais ouvrir un compte.' },
+        { title: 'Ask about fees & documents', hint: 'Quels documents faut-il ? Il y a des frais ?' },
+        { title: 'Send a package', hint: 'Je voudrais envoyer un colis. Combien coûte l\'envoi ?' },
+        { title: 'Fill out the form', hint: 'Remplissez ce formulaire. Signez ici.' },
+        { title: 'Thank and leave', hint: 'Merci beaucoup, au revoir !' },
+      ],
+    },
+  ],
+  vocab: [
+    { fr: 'un compte', en: 'an account' },
+    { fr: 'la banque', en: 'the bank' },
+    { fr: 'une carte de crédit', en: 'a credit card' },
+    { fr: 'des frais', en: 'fees' },
+    { fr: 'un document', en: 'a document' },
+    { fr: 'un colis', en: 'a package' },
+    { fr: 'une lettre', en: 'a letter' },
+    { fr: 'un timbre', en: 'a stamp' },
+    { fr: 'envoyer', en: 'to send' },
+    { fr: 'la poste', en: 'the post office' },
+    { fr: 'remplir', en: 'to fill out' },
+    { fr: 'un formulaire', en: 'a form' },
+    { fr: 'signer', en: 'to sign' },
+    { fr: 'cocher', en: 'to check (a box)' },
+    { fr: 'une case', en: 'a box (on a form)' },
+    { fr: 'une adresse', en: 'an address' },
+    { fr: 'la date de naissance', en: 'date of birth' },
+    { fr: 'il faut', en: 'one must / it takes' },
+    { fr: 'gratuit', en: 'free (no cost)' },
+    { fr: "une pièce d'identité", en: 'an ID document' },
+  ],
+}
+
+export const weeks: Week[] = [week1, week2, week3, week4, week5, week6, week7]
