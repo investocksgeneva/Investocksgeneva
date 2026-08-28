@@ -1028,4 +1028,121 @@ export const week7: Week = {
   ],
 }
 
-export const weeks: Week[] = [week1, week2, week3, week4, week5, week6, week7]
+export const week8: Week = {
+  id: 8,
+  title: 'Week 8: Emergencies & safety',
+  goal:
+    'Call for help, describe what happened, and understand basic safety instructions — entirely in French.',
+  sessions: [
+    {
+      id: 1,
+      title: 'Calling for help',
+      subtitle: 'Au secours !',
+      kind: 'phrases',
+      corePhrases: [
+        { fr: 'Au secours !', en: 'Help!' },
+        { fr: "À l'aide !", en: 'Help! (also "assist me")' },
+        { fr: 'Appelez une ambulance !', en: 'Call an ambulance!' },
+        { fr: 'Appelez la police !', en: 'Call the police!' },
+        { fr: 'Appelez les pompiers !', en: 'Call the fire department!' },
+        { fr: "C'est une urgence.", en: "It's an emergency." },
+        { fr: 'Il y a eu un accident.', en: "There's been an accident." },
+      ],
+      grammarSeed:
+        "Switzerland's emergency numbers are worth memorizing cold, same spirit as Week 1's number drill: 144 for ambulance, 117 for police, 118 for the fire department (112 also works as a general European emergency number). Say all three out loud until they're automatic — this isn't a moment to be looking things up.",
+      dialogue: [
+        { speaker: 'A', fr: 'Au secours ! Il y a eu un accident !', en: "Help! There's been an accident!" },
+        { speaker: 'B', fr: "C'est une urgence ? J'appelle une ambulance.", en: "Is it an emergency? I'm calling an ambulance." },
+        { speaker: 'A', fr: 'Oui, vite !', en: 'Yes, quickly!' },
+      ],
+      drill: 'Say the three Swiss emergency numbers out loud with the service each one calls.',
+    },
+    {
+      id: 2,
+      title: 'Describing what happened',
+      subtitle: "J'ai vu…",
+      kind: 'transaction',
+      useCases: [
+        { phrase: "J'ai vu un accident.", use: 'saying what you witnessed' },
+        { phrase: "Quelqu'un est blessé.", use: 'reporting someone is hurt' },
+        { phrase: 'Il/elle ne respire pas.', use: "reporting someone isn't breathing" },
+        { phrase: "C'était à quelle heure ?", use: 'being asked when it happened' },
+        { phrase: 'Où exactement ?', use: 'being asked exactly where' },
+      ],
+      grammarSeed:
+        '"J\'ai vu" (I saw) and "c\'était" (it was) are your first taste of past tense — French mostly builds the past with "avoir/être + a past participle" (j\'ai vu, j\'ai fait, j\'ai appelé). Don\'t chase the full grammar yet; just recognize these two as "something already happened", and you can describe most emergencies with just them.',
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: "Qu'est-ce qui s'est passé ?",
+          en: 'What happened?',
+        },
+        { speaker: 'B', fr: "J'ai vu un accident. Quelqu'un est blessé.", en: 'I saw an accident. Someone is hurt.' },
+        { speaker: 'A', fr: "C'était à quelle heure, et où exactement ?", en: 'What time was it, and exactly where?' },
+        { speaker: 'B', fr: 'Il y a cinq minutes, devant la gare.', en: 'Five minutes ago, in front of the station.' },
+      ],
+      drill: 'Describe a simple past event out loud using "j\'ai vu…" and "c\'était…".',
+    },
+    {
+      id: 3,
+      title: 'Safety instructions',
+      subtitle: 'Attention !',
+      kind: 'phrases',
+      corePhrases: [
+        { fr: 'Attention !', en: 'Watch out! / Careful!' },
+        { fr: 'Ne touchez pas.', en: "Don't touch." },
+        { fr: 'Restez calme.', en: 'Stay calm.' },
+        { fr: 'Sortez immédiatement.', en: 'Get out immediately.' },
+        { fr: "C'est dangereux.", en: "It's dangerous." },
+        { fr: 'Interdit de fumer.', en: 'No smoking.' },
+      ],
+      grammarSeed:
+        '"Ne touchez pas" is a negative imperative — same "vous" command form from Week 7\'s "signez"/"remplissez", just wrapped in "ne… pas". Once you have the imperative, negating it is nearly free.',
+      dialogue: [
+        { speaker: 'A', fr: "Attention, c'est dangereux ! Ne touchez pas.", en: "Careful, it's dangerous! Don't touch." },
+        { speaker: 'B', fr: "D'accord. On sort ?", en: 'Okay. Should we get out?' },
+        { speaker: 'A', fr: 'Oui, sortez immédiatement, restez calme.', en: 'Yes, get out immediately, stay calm.' },
+      ],
+      drill: 'React out loud to three different safety warnings as if you just heard them.',
+    },
+    {
+      id: 4,
+      title: 'Consolidation & role-play',
+      subtitle: 'Checkpoint: reporting an emergency',
+      kind: 'roleplay',
+      drill:
+        'Combine Sessions 1–3 into one unscripted role-play: you witness something, call the right number, describe what happened, give your location, and follow safety instructions. This is Week 8\'s checkpoint.',
+      roleplaySteps: [
+        { title: 'Call for help', hint: 'Appelez une ambulance ! C\'est une urgence.' },
+        { title: 'State the emergency', hint: 'Il y a eu un accident. Quelqu\'un est blessé.' },
+        { title: 'Describe what happened', hint: 'J\'ai vu… C\'était à quelle heure ? Il y a cinq minutes.' },
+        { title: 'Give your location', hint: 'Où exactement ? Devant la gare.' },
+        { title: 'Follow instructions', hint: 'Restez calme. Sortez immédiatement.' },
+      ],
+    },
+  ],
+  vocab: [
+    { fr: 'au secours', en: 'help' },
+    { fr: 'une ambulance', en: 'an ambulance' },
+    { fr: 'la police', en: 'the police' },
+    { fr: 'les pompiers', en: 'the fire department' },
+    { fr: 'une urgence', en: 'an emergency' },
+    { fr: 'un accident', en: 'an accident' },
+    { fr: 'blessé', en: 'injured/hurt' },
+    { fr: 'respirer', en: 'to breathe' },
+    { fr: 'attention', en: 'watch out / careful' },
+    { fr: 'dangereux', en: 'dangerous' },
+    { fr: 'interdit', en: 'forbidden' },
+    { fr: 'immédiatement', en: 'immediately' },
+    { fr: 'rester calme', en: 'to stay calm' },
+    { fr: 'sortir', en: 'to get out / exit' },
+    { fr: "quelqu'un", en: 'someone' },
+    { fr: "j'ai vu", en: 'I saw' },
+    { fr: "c'était", en: 'it was' },
+    { fr: 'exactement', en: 'exactly' },
+    { fr: 'appeler', en: 'to call' },
+    { fr: 'toucher', en: 'to touch' },
+  ],
+}
+
+export const weeks: Week[] = [week1, week2, week3, week4, week5, week6, week7, week8]

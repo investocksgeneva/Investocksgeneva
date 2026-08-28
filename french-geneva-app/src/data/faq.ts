@@ -224,4 +224,18 @@ export const faq: FaqEntry[] = [
       'That\'s the imperative (command) form — used for instructions, requests, and official forms. For "vous", you just drop "vous" and keep the verb ending: "vous remplissez" → "remplissez !" (fill out!), "vous signez" → "signez !" (sign!). It\'s how forms, signs, and polite requests give commands in French.',
     keywords: ['remplissez', 'signez', 'cochez', 'imperative', 'command form'],
   },
+  {
+    id: 'passe-compose-intro',
+    question: 'What\'s going on grammatically with "j\'ai vu" and "c\'était"?',
+    answer:
+      'Both describe something already finished — French\'s two main past tenses. "J\'ai vu" ("I saw") is the passé composé, built as avoir/être + a past participle (j\'ai vu, j\'ai fait, j\'ai appelé) — it\'s for a specific completed action. "C\'était" ("it was") is the imparfait, used for background description or an ongoing state in the past. At this stage, just recognize both as "this already happened" — you don\'t need the full conjugation system yet to describe most things.',
+    keywords: ['j\'ai vu', 'c\'était', 'passé composé', 'imparfait', 'past tense', 'avoir vu'],
+  },
+  {
+    id: 'negative-imperative',
+    question: 'How do I say "don\'t do that" in French, like "ne touchez pas"?',
+    answer:
+      'Wrap the imperative in "ne… pas", same as any negative sentence: "touchez" (touch) → "ne touchez pas" (don\'t touch). With "tu" it works the same way: "ne touche pas". It\'s the same imperative form from Week 7\'s "signez"/"remplissez" — negating it costs you nothing extra to learn.',
+    keywords: ['ne touchez pas', 'negative imperative', 'don\'t', 'ne pas'],
+  },
 ]
