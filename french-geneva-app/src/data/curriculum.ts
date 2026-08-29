@@ -1145,4 +1145,121 @@ export const week8: Week = {
   ],
 }
 
-export const weeks: Week[] = [week1, week2, week3, week4, week5, week6, week7, week8]
+export const week9: Week = {
+  id: 9,
+  title: 'Week 9: Work & the office',
+  goal:
+    'Introduce yourself professionally, take part in a simple meeting, and handle basic office requests — entirely in French.',
+  sessions: [
+    {
+      id: 1,
+      title: 'Professional introductions',
+      subtitle: 'Voici mon collègue',
+      kind: 'phrases',
+      corePhrases: [
+        { fr: 'Je travaille dans la finance.', en: "I work in finance." },
+        { fr: 'Je travaille pour une banque.', en: 'I work for a bank.' },
+        { fr: 'Je suis responsable de…', en: "I'm in charge of…" },
+        { fr: 'Voici mon collègue.', en: 'This is my colleague.' },
+        { fr: 'Enchanté(e).', en: 'Pleased to meet you.' },
+        { fr: 'Depuis quand travaillez-vous ici ?', en: 'How long have you worked here?' },
+      ],
+      grammarSeed:
+        '"Travailler" pairs with different prepositions depending on what follows: "dans" for a field/industry (dans la finance), "pour" for who you work for (pour une banque), "chez" for a specific employer said more casually (chez UBS). Same verb, the preposition just points at a different piece of the picture.',
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: 'Bonjour, voici mon collègue, Marc.',
+          en: 'Hello, this is my colleague, Marc.',
+        },
+        { speaker: 'B', fr: 'Enchanté. Vous travaillez dans quel domaine ?', en: 'Pleased to meet you. What field do you work in?' },
+        { speaker: 'A', fr: 'Je travaille dans la finance, pour une banque à Genève.', en: "I work in finance, for a bank in Geneva." },
+      ],
+      drill: 'Introduce yourself professionally out loud: your role, your company, and how long you\'ve worked there.',
+    },
+    {
+      id: 2,
+      title: 'In a meeting',
+      subtitle: "Qu'en pensez-vous ?",
+      kind: 'transaction',
+      useCases: [
+        { phrase: 'On commence ?', use: 'suggesting starting' },
+        { phrase: "Qu'en pensez-vous ?", use: 'asking for an opinion' },
+        { phrase: "Je suis d'accord.", use: 'agreeing' },
+        { phrase: "Je ne suis pas d'accord.", use: 'disagreeing' },
+        { phrase: 'Pouvez-vous répéter ?', use: 'asking someone to repeat' },
+        { phrase: 'On fait une pause ?', use: 'suggesting a break' },
+      ],
+      dialogue: [
+        { speaker: 'A', fr: "On commence ? Qu'en pensez-vous du projet ?", en: "Shall we start? What do you think of the project?" },
+        { speaker: 'B', fr: "Je suis d'accord, c'est une bonne idée.", en: "I agree, it's a good idea." },
+        { speaker: 'A', fr: 'Pouvez-vous répéter, s\'il vous plaît ? Je n\'ai pas compris.', en: "Can you repeat that, please? I didn't understand." },
+      ],
+      drill: 'Practice agreeing and disagreeing with three statements out loud.',
+    },
+    {
+      id: 3,
+      title: 'Office requests',
+      subtitle: 'Avant vendredi',
+      kind: 'transaction',
+      useCases: [
+        { phrase: 'Pouvez-vous m\'envoyer… ?', use: 'asking someone to send you something' },
+        { phrase: "J'ai besoin d'aide avec…", use: 'asking for help' },
+        { phrase: 'Le rapport est prêt.', use: 'saying something is ready' },
+        { phrase: 'avant vendredi', use: 'giving a deadline' },
+        { phrase: 'Merci de votre aide.', use: 'thanking someone for help' },
+      ],
+      grammarSeed:
+        '"Avant" (before) and "après" (after) are the two prepositions that make deadlines work: "avant vendredi" (by/before Friday), "après la réunion" (after the meeting). Easy to mix up under pressure, so it\'s worth drilling as a pair, same as Week 2\'s "tout droit" vs "à droite".',
+      dialogue: [
+        {
+          speaker: 'A',
+          fr: "Pouvez-vous m'envoyer le rapport avant vendredi ?",
+          en: 'Can you send me the report before Friday?',
+        },
+        { speaker: 'B', fr: "Oui, il est presque prêt.", en: "Yes, it's almost ready." },
+        { speaker: 'A', fr: 'Merci de votre aide.', en: 'Thanks for your help.' },
+      ],
+      drill: 'Request three different things from a colleague out loud, each with a deadline using "avant".',
+    },
+    {
+      id: 4,
+      title: 'Consolidation & role-play',
+      subtitle: 'Checkpoint: first day at work',
+      kind: 'roleplay',
+      drill:
+        'Combine Sessions 1–3 into one unscripted role-play: introduce yourself to a new colleague, join a meeting and share an opinion, then make or respond to an office request. This is Week 9\'s checkpoint.',
+      roleplaySteps: [
+        { title: 'Introduce yourself professionally', hint: 'Je travaille dans…, pour…' },
+        { title: 'Meet a colleague', hint: 'Voici mon collègue. Enchanté(e).' },
+        { title: 'Share an opinion in a meeting', hint: 'Qu\'en pensez-vous ? Je suis d\'accord.' },
+        { title: 'Make a request with a deadline', hint: 'Pouvez-vous m\'envoyer… avant vendredi ?' },
+        { title: 'Thank and wrap up', hint: 'Merci de votre aide, à bientôt !' },
+      ],
+    },
+  ],
+  vocab: [
+    { fr: 'travailler', en: 'to work' },
+    { fr: 'un collègue', en: 'a colleague' },
+    { fr: 'une réunion', en: 'a meeting' },
+    { fr: 'un rapport', en: 'a report' },
+    { fr: "d'accord", en: 'agreed / okay' },
+    { fr: 'une entreprise', en: 'a company' },
+    { fr: 'un bureau', en: 'an office' },
+    { fr: 'une pause', en: 'a break' },
+    { fr: 'avant', en: 'before' },
+    { fr: 'après', en: 'after' },
+    { fr: 'envoyer', en: 'to send' },
+    { fr: 'prêt', en: 'ready' },
+    { fr: 'une tâche', en: 'a task' },
+    { fr: 'un projet', en: 'a project' },
+    { fr: 'un responsable', en: 'a manager / person in charge' },
+    { fr: 'une échéance', en: 'a deadline' },
+    { fr: 'répéter', en: 'to repeat' },
+    { fr: 'aider', en: 'to help' },
+    { fr: 'un domaine', en: 'a field (of work)' },
+    { fr: 'enchanté', en: 'pleased to meet you' },
+  ],
+}
+
+export const weeks: Week[] = [week1, week2, week3, week4, week5, week6, week7, week8, week9]

@@ -238,4 +238,18 @@ export const faq: FaqEntry[] = [
       'Wrap the imperative in "ne… pas", same as any negative sentence: "touchez" (touch) → "ne touchez pas" (don\'t touch). With "tu" it works the same way: "ne touche pas". It\'s the same imperative form from Week 7\'s "signez"/"remplissez" — negating it costs you nothing extra to learn.',
     keywords: ['ne touchez pas', 'negative imperative', 'don\'t', 'ne pas'],
   },
+  {
+    id: 'travailler-dans-pour-chez',
+    question: 'What\'s the difference between "travailler dans", "pour", and "chez"?',
+    answer:
+      'They point at different pieces of your job: "dans" names the field or industry ("je travaille dans la finance"), "pour" names who you work for as an organization ("je travaille pour une banque"), and "chez" names a specific employer more casually, like saying "at" ("je travaille chez UBS"). Pick based on which piece of information you\'re actually giving.',
+    keywords: ['travailler dans', 'travailler pour', 'travailler chez', 'work in', 'work for'],
+  },
+  {
+    id: 'avant-apres',
+    question: 'What\'s the difference between "avant" and "après"?',
+    answer:
+      '"Avant" means "before" and "après" means "after" — opposites, easy to mix up under pressure. "Avant vendredi" (by/before Friday) sets a deadline; "après la réunion" (after the meeting) points to something that follows. Worth drilling as a pair, same as Week 2\'s "tout droit" vs "à droite".',
+    keywords: ['avant', 'après', 'before', 'after', 'deadline'],
+  },
 ]
