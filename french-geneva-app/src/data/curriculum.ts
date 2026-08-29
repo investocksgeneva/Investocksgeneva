@@ -1262,4 +1262,114 @@ export const week9: Week = {
   ],
 }
 
-export const weeks: Week[] = [week1, week2, week3, week4, week5, week6, week7, week8, week9]
+export const week10: Week = {
+  id: 10,
+  title: 'Week 10: At home & family',
+  goal:
+    'Talk about your family, describe your home, and handle everyday household conversations — entirely in French.',
+  sessions: [
+    {
+      id: 1,
+      title: 'Family members',
+      subtitle: 'Ma famille',
+      kind: 'phrases',
+      corePhrases: [
+        { fr: 'ma famille', en: 'my family' },
+        { fr: 'mon mari / ma femme', en: 'my husband / my wife' },
+        { fr: 'mon fils / ma fille', en: 'my son / my daughter' },
+        { fr: 'mes parents', en: 'my parents' },
+        { fr: 'mon frère / ma sœur', en: 'my brother / my sister' },
+        { fr: 'Vous êtes combien dans la famille ?', en: 'How many are you in the family?' },
+      ],
+      grammarSeed:
+        '"Mon/ma/mes" agree with the noun\'s gender, not the owner\'s — a classic English-speaker trap. A man says "ma sœur" (his sister) because "sœur" is feminine, and a woman says "mon frère" (her brother) because "frère" is masculine. The possessive never changes based on who\'s speaking, only based on the noun it points to.',
+      dialogue: [
+        { speaker: 'A', fr: 'Voici ma famille : mon mari et mes deux enfants.', en: 'This is my family: my husband and my two kids.' },
+        { speaker: 'B', fr: 'Vous êtes combien en tout ?', en: 'How many are you in total?' },
+        { speaker: 'A', fr: 'Quatre, avec mon fils et ma fille.', en: 'Four, with my son and my daughter.' },
+      ],
+      drill: 'Introduce three family members out loud, using "mon/ma/mes" correctly for each.',
+    },
+    {
+      id: 2,
+      title: 'Around the house',
+      subtitle: 'La maison',
+      kind: 'phrases',
+      corePhrases: [
+        { fr: 'la cuisine', en: 'the kitchen' },
+        { fr: 'le salon', en: 'the living room' },
+        { fr: 'la chambre', en: 'the bedroom' },
+        { fr: 'la salle de bain', en: 'the bathroom' },
+        { fr: 'le jardin', en: 'the garden' },
+        { fr: "C'est à l'étage.", en: "It's upstairs." },
+        { fr: 'au rez-de-chaussée', en: 'on the ground floor' },
+      ],
+      dialogue: [
+        { speaker: 'A', fr: 'Voici le salon, et la cuisine est là.', en: "Here's the living room, and the kitchen is there." },
+        { speaker: 'B', fr: 'Et les chambres ?', en: 'And the bedrooms?' },
+        { speaker: 'A', fr: "C'est à l'étage, la salle de bain aussi.", en: "They're upstairs, the bathroom too." },
+      ],
+      drill: 'Describe three rooms in your home out loud, saying where each one is.',
+    },
+    {
+      id: 3,
+      title: 'Everyday household phrases',
+      subtitle: 'En famille',
+      kind: 'transaction',
+      useCases: [
+        { phrase: "C'est à qui le tour ?", use: "asking whose turn it is" },
+        { phrase: 'Range ta chambre.', use: 'asking a child to tidy their room' },
+        { phrase: 'On mange à quelle heure ?', use: 'asking when dinner is' },
+        { phrase: 'Qui a fait la vaisselle ?', use: 'asking who did the dishes' },
+        { phrase: 'Éteins la lumière.', use: 'asking someone to turn off the light' },
+      ],
+      grammarSeed:
+        '"Range" and "éteins" are imperatives too — but built from "tu", not "vous", because family is the one place "tu" is the default (see Week 4). "Tu ranges" → "range !", "tu éteins" → "éteins !". Same imperative idea as work forms/instructions, just the informal register.',
+      dialogue: [
+        { speaker: 'A', fr: 'On mange à quelle heure ?', en: 'What time are we eating?' },
+        { speaker: 'B', fr: "Dans dix minutes. Range ta chambre avant, s'il te plaît.", en: 'In ten minutes. Tidy your room first, please.' },
+        { speaker: 'A', fr: "D'accord, j'arrive.", en: "Okay, I'm coming." },
+      ],
+      drill: 'Give three household instructions out loud using "tu" imperatives.',
+    },
+    {
+      id: 4,
+      title: 'Consolidation & role-play',
+      subtitle: 'Checkpoint: family dinner',
+      kind: 'roleplay',
+      drill:
+        'Combine Sessions 1–3 into one unscripted role-play: introduce your family, give a quick house tour, ask about dinner time, and give one household instruction. This is Week 10\'s checkpoint.',
+      roleplaySteps: [
+        { title: 'Introduce your family', hint: 'Voici ma famille : mon/ma…' },
+        { title: 'Give a house tour', hint: 'Voici le salon, la cuisine est là, c\'est à l\'étage.' },
+        { title: 'Ask about dinner', hint: 'On mange à quelle heure ?' },
+        { title: 'Give a household instruction', hint: 'Range ta chambre. Éteins la lumière.' },
+        { title: 'Wrap up warmly', hint: 'Merci à tous, bon appétit !' },
+      ],
+    },
+  ],
+  vocab: [
+    { fr: 'la famille', en: 'the family' },
+    { fr: 'le mari', en: 'the husband' },
+    { fr: 'la femme', en: 'the wife / woman' },
+    { fr: 'le fils', en: 'the son' },
+    { fr: 'la fille', en: 'the daughter / girl' },
+    { fr: 'les parents', en: 'the parents' },
+    { fr: 'le frère', en: 'the brother' },
+    { fr: 'la sœur', en: 'the sister' },
+    { fr: 'la cuisine', en: 'the kitchen' },
+    { fr: 'le salon', en: 'the living room' },
+    { fr: 'la chambre', en: 'the bedroom' },
+    { fr: 'le jardin', en: 'the garden' },
+    { fr: 'ranger', en: 'to tidy up' },
+    { fr: 'éteindre', en: 'to turn off' },
+    { fr: 'la lumière', en: 'the light' },
+    { fr: 'le tour', en: 'the turn' },
+    { fr: 'la vaisselle', en: 'the dishes' },
+    { fr: 'oublier', en: 'to forget' },
+    { fr: "l'étage", en: 'the upstairs floor' },
+    { fr: 'le rez-de-chaussée', en: 'the ground floor' },
+  ],
+}
+
+export const weeks: Week[] = [week1, week2, week3, week4, week5, week6, week7, week8, week9, week10]

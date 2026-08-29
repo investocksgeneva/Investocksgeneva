@@ -252,4 +252,18 @@ export const faq: FaqEntry[] = [
       '"Avant" means "before" and "après" means "after" — opposites, easy to mix up under pressure. "Avant vendredi" (by/before Friday) sets a deadline; "après la réunion" (after the meeting) points to something that follows. Worth drilling as a pair, same as Week 2\'s "tout droit" vs "à droite".',
     keywords: ['avant', 'après', 'before', 'after', 'deadline'],
   },
+  {
+    id: 'mon-ma-mes',
+    question: 'Why do I say "ma sœur" even if I\'m a man — shouldn\'t "my" match me?',
+    answer:
+      '"Mon/ma/mes" agree with the noun they describe, not with the speaker. "Sœur" (sister) is feminine, so it\'s always "ma sœur" no matter who\'s talking — same for "mon frère" (brother, masculine) said by a woman. It\'s the same logic as un/une: the word\'s own gender decides the article, not the person using it. One extra wrinkle: before a feminine noun starting with a vowel sound, "ma" becomes "mon" for pronunciation — "mon amie" (my [female] friend), not "ma amie".',
+    keywords: ['mon', 'ma', 'mes', 'possessive', 'ma sœur', 'mon frère', 'my'],
+  },
+  {
+    id: 'tu-imperative',
+    question: 'How is "range ta chambre" different from the "vous" commands I learned before?',
+    answer:
+      'Same imperative idea, informal register — built from "tu" instead of "vous". Drop "tu" and keep the verb: "tu ranges" → "range !" (tidy up!), "tu éteins" → "éteins !" (turn off!). You\'d use this with family, close friends, or kids — anywhere "tu" is the natural pronoun (see Week 4\'s tu/vous rule). With people you don\'t know well, stick to the "vous" forms from Weeks 7–8.',
+    keywords: ['range ta chambre', 'tu imperative', 'informal command', 'eteins'],
+  },
 ]
