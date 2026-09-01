@@ -266,4 +266,18 @@ export const faq: FaqEntry[] = [
       'Same imperative idea, informal register — built from "tu" instead of "vous". Drop "tu" and keep the verb: "tu ranges" → "range !" (tidy up!), "tu éteins" → "éteins !" (turn off!). You\'d use this with family, close friends, or kids — anywhere "tu" is the natural pronoun (see Week 4\'s tu/vous rule). With people you don\'t know well, stick to the "vous" forms from Weeks 7–8.',
     keywords: ['range ta chambre', 'tu imperative', 'informal command', 'eteins'],
   },
+  {
+    id: 'aimer-adorer-detester',
+    question: 'How strong is "aimer" vs "adorer" vs "détester"?',
+    answer:
+      'Think of it as a scale: "détester" (hate) at one end, "ne pas aimer" (not like) mildly negative, "aimer" (like) mildly positive, and "adorer" (love) at the other end. All four work the same way grammatically — followed by a noun or an infinitive verb ("j\'aime lire", "j\'adore voyager") — so you only need to pick the right intensity, not learn new sentence structure for each one.',
+    keywords: ['aimer', 'adorer', 'détester', 'like', 'love', 'hate', 'préférer'],
+  },
+  {
+    id: 'jouer-a-de',
+    question: 'What\'s the difference between "jouer à" and "jouer de"?',
+    answer:
+      '"Jouer à" is for games and sports — "jouer au tennis", "jouer aux cartes" (cards). "Jouer de" is for musical instruments — "jouer du piano", "jouer de la guitare". Same verb "jouer" (to play), but the preposition tells you which kind of "playing" you mean.',
+    keywords: ['jouer à', 'jouer de', 'jouer au', 'jouer du', 'play instrument', 'play sport'],
+  },
 ]

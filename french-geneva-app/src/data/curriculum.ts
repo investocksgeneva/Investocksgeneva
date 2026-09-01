@@ -1372,4 +1372,113 @@ export const week10: Week = {
   ],
 }
 
-export const weeks: Week[] = [week1, week2, week3, week4, week5, week6, week7, week8, week9, week10]
+export const week11: Week = {
+  id: 11,
+  title: 'Week 11: Leisure & culture',
+  goal:
+    'Talk about your hobbies, invite a friend out, and enjoy a museum or cinema outing — entirely in French.',
+  sessions: [
+    {
+      id: 1,
+      title: 'Talking about hobbies',
+      subtitle: "Qu'est-ce que vous aimez faire ?",
+      kind: 'phrases',
+      corePhrases: [
+        { fr: "J'aime le sport.", en: 'I like sports.' },
+        { fr: "Je n'aime pas la lecture.", en: "I don't like reading." },
+        { fr: "J'adore la musique.", en: 'I love music.' },
+        { fr: 'Je préfère le cinéma.', en: 'I prefer the cinema.' },
+        { fr: 'Qu\'est-ce que vous faites le week-end ?', en: 'What do you do on weekends?' },
+      ],
+      grammarSeed:
+        '"Aimer/adorer/détester/préférer" all work the same way — followed by a noun ("j\'aime le sport") or an infinitive verb ("j\'aime lire", I like to read). One quirk worth knowing: "jouer à" is for games and sports ("jouer au foot"), while "jouer de" is for instruments ("jouer du piano") — same verb, different preposition depending on what you\'re playing.',
+      dialogue: [
+        { speaker: 'A', fr: "Qu'est-ce que vous faites le week-end ?", en: 'What do you do on weekends?' },
+        { speaker: 'B', fr: "J'adore la musique, je joue de la guitare. Et vous ?", en: 'I love music, I play guitar. And you?' },
+        { speaker: 'A', fr: 'Je préfère le sport, je joue au tennis.', en: 'I prefer sports, I play tennis.' },
+      ],
+      drill: 'Say three things you like or dislike out loud, using "aimer", "adorer", or "détester".',
+    },
+    {
+      id: 2,
+      title: 'Inviting someone out',
+      subtitle: 'Ça te dit ?',
+      kind: 'transaction',
+      useCases: [
+        { phrase: "Ça te dit d'aller au cinéma ?", use: 'inviting a friend (informal)' },
+        { phrase: 'Il y a un bon film en ce moment.', use: 'suggesting a reason to go' },
+        { phrase: 'On se retrouve où ?', use: 'agreeing on a meeting spot' },
+        { phrase: 'À quelle heure ça commence ?', use: 'asking the start time' },
+        { phrase: "J'ai déjà des projets.", use: 'politely declining' },
+      ],
+      grammarSeed:
+        'Notice this session uses "tu/te" throughout, not "vous" — inviting a friend to hang out is exactly the informal context Week 4 flagged as the exception to the "vous" default. Compare "ça te dit ?" here with the formal "ça vous dit ?" from Week 4\'s planning session; same phrase, different register for a different relationship.',
+      dialogue: [
+        { speaker: 'A', fr: "Ça te dit d'aller au cinéma samedi ?", en: 'Want to go to the cinema on Saturday?' },
+        { speaker: 'B', fr: "Avec plaisir ! On se retrouve où ?", en: 'Gladly! Where should we meet?' },
+        { speaker: 'A', fr: 'Devant le cinéma, à sept heures.', en: 'In front of the cinema, at seven.' },
+      ],
+      drill: 'Invite someone to three different activities out loud, using "ça te dit de… ?" each time.',
+    },
+    {
+      id: 3,
+      title: 'At the museum',
+      subtitle: 'Un billet d\'entrée',
+      kind: 'transaction',
+      useCases: [
+        { phrase: "Un billet d'entrée, s'il vous plaît.", use: 'buying admission' },
+        { phrase: "C'est gratuit le premier dimanche du mois.", use: 'a common Geneva museum policy' },
+        { phrase: "Est-ce qu'il y a une visite guidée ?", use: 'asking about guided tours' },
+        { phrase: "L'exposition dure combien de temps ?", use: 'asking how long an exhibit takes' },
+        { phrase: 'Où sont les toilettes ?', use: 'asking where the restrooms are' },
+      ],
+      grammarSeed:
+        'Worth knowing if you\'re in Geneva: many municipal museums are free on the first Sunday of the month ("gratuit le premier dimanche du mois") — a real, recurring detail rather than just app content, so it\'s worth actually checking a museum\'s site before you go.',
+      dialogue: [
+        { speaker: 'A', fr: "Bonjour, un billet d'entrée, s'il vous plaît.", en: 'Hello, one admission ticket, please.' },
+        { speaker: 'B', fr: "C'est gratuit aujourd'hui, premier dimanche du mois !", en: "It's free today, first Sunday of the month!" },
+        { speaker: 'A', fr: "Parfait ! Est-ce qu'il y a une visite guidée ?", en: 'Perfect! Is there a guided tour?' },
+      ],
+      drill: 'Ask three questions at a museum ticket counter, out loud.',
+    },
+    {
+      id: 4,
+      title: 'Consolidation & role-play',
+      subtitle: 'Checkpoint: planning a weekend outing',
+      kind: 'roleplay',
+      drill:
+        'Combine Sessions 1–3 into one unscripted role-play: talk about what you like doing, invite a friend to an outing, and ask a question once you\'re there. This is Week 11\'s checkpoint.',
+      roleplaySteps: [
+        { title: 'Talk about your hobbies', hint: "J'aime… J'adore… Je préfère…" },
+        { title: 'Invite a friend out', hint: "Ça te dit d'aller… ?" },
+        { title: 'Agree on time and place', hint: 'On se retrouve où ? À quelle heure ?' },
+        { title: 'Ask something at the venue', hint: "Est-ce qu'il y a une visite guidée ?" },
+        { title: 'Wrap up', hint: "C'était génial, merci !" },
+      ],
+    },
+  ],
+  vocab: [
+    { fr: 'aimer', en: 'to like' },
+    { fr: 'adorer', en: 'to love' },
+    { fr: 'détester', en: 'to hate' },
+    { fr: 'préférer', en: 'to prefer' },
+    { fr: 'le sport', en: 'sports' },
+    { fr: 'la lecture', en: 'reading' },
+    { fr: 'la musique', en: 'music' },
+    { fr: 'le cinéma', en: 'the cinema' },
+    { fr: 'un film', en: 'a film' },
+    { fr: 'une exposition', en: 'an exhibition' },
+    { fr: 'un musée', en: 'a museum' },
+    { fr: 'un billet', en: 'a ticket' },
+    { fr: 'gratuit', en: 'free (no cost)' },
+    { fr: 'une visite guidée', en: 'a guided tour' },
+    { fr: 'jouer à', en: 'to play (a game/sport)' },
+    { fr: 'jouer de', en: 'to play (an instrument)' },
+    { fr: 'le week-end', en: 'the weekend' },
+    { fr: 'des projets', en: 'plans' },
+    { fr: 'se retrouver', en: 'to meet up' },
+    { fr: 'durer', en: 'to last' },
+  ],
+}
+
+export const weeks: Week[] = [week1, week2, week3, week4, week5, week6, week7, week8, week9, week10, week11]
