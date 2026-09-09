@@ -182,4 +182,102 @@ export const faq: FaqEntry[] = [
       '"Depuis" means "since" or "for", used with a present-tense verb to describe something that started in the past and is still true now — "J\'habite ici depuis six mois" ("I\'ve been living here for six months", and I still do). English switches to "have been -ing"; French just stays in the present tense with "depuis".',
     keywords: ['depuis', 'since', 'for', 'duration', 'depuis combien de temps'],
   },
+  {
+    id: 'au-a-la',
+    question: 'What\'s the difference between "au" and "à la"?',
+    answer:
+      '"Au" is just "à + le" glued together for masculine nouns — you\'ll never say "à le". "À la" is used as-is for feminine nouns, and "à + les" becomes "aux" for plurals. It shows up constantly in "avoir mal à" (j\'ai mal au dos vs. j\'ai mal à la tête) — same gender rule as un/une, just fused with "à".',
+    keywords: ['au', 'à la', 'aux', 'a le', 'contraction', 'avoir mal'],
+  },
+  {
+    id: 'avoir-mal-a',
+    question: 'How does "avoir mal à" work?',
+    answer:
+      '"Avoir mal à" literally means "to have pain at" — you say "j\'ai mal à" plus the body part with its article: "j\'ai mal au ventre" (stomach), "j\'ai mal à la tête" (head), "j\'ai mal aux dents" (teeth, plural). It\'s the standard way to describe any ache in French — much more common than a separate verb for each type of pain.',
+    keywords: ['avoir mal', 'j\'ai mal', 'pain', 'ache', 'hurt', 'symptoms'],
+  },
+  {
+    id: 'combien-de-noun',
+    question: 'How is "combien de" different from just "combien" ?',
+    answer:
+      '"Combien" alone asks "how much" in general, usually about price ("C\'est combien ?"). "Combien de" + a noun asks "how many/much of that specific thing" — "combien de pièces ?" (how many rooms), "combien de temps ?" (how much time). Same word, just paired up when you\'re asking about a specific noun rather than a price in isolation.',
+    keywords: ['combien de', 'combien', 'how many', 'how much', 'pieces'],
+  },
+  {
+    id: 'il-y-a',
+    question: 'What does "il y a" mean?',
+    answer:
+      '"Il y a" means "there is" or "there are" — the same fixed phrase works for both singular and plural, so you never conjugate it differently. "Il y a un problème" (there\'s a problem), "il y a des charges" (there are fees). It also means "ago" with time expressions ("il y a six mois" = six months ago), but the "there is/are" sense is the one you\'ll use constantly.',
+    keywords: ['il y a', 'there is', 'there are', 'ily a'],
+  },
+  {
+    id: 'il-faut',
+    question: 'What does "il faut" mean?',
+    answer:
+      '"Il faut" means "one must / it\'s necessary to" — like "il y a", it\'s a fixed impersonal phrase that never changes to match a person. "Il faut remplir un formulaire" (you need to fill out a form), "il faut deux documents" (two documents are needed). Follow it with either an infinitive verb or a noun.',
+    keywords: ['il faut', 'must', 'necessary', 'need to', 'have to'],
+  },
+  {
+    id: 'imperative-vous',
+    question: 'Why do instructions say "remplissez" or "signez" instead of "vous remplissez"?',
+    answer:
+      'That\'s the imperative (command) form — used for instructions, requests, and official forms. For "vous", you just drop "vous" and keep the verb ending: "vous remplissez" → "remplissez !" (fill out!), "vous signez" → "signez !" (sign!). It\'s how forms, signs, and polite requests give commands in French.',
+    keywords: ['remplissez', 'signez', 'cochez', 'imperative', 'command form'],
+  },
+  {
+    id: 'passe-compose-intro',
+    question: 'What\'s going on grammatically with "j\'ai vu" and "c\'était"?',
+    answer:
+      'Both describe something already finished — French\'s two main past tenses. "J\'ai vu" ("I saw") is the passé composé, built as avoir/être + a past participle (j\'ai vu, j\'ai fait, j\'ai appelé) — it\'s for a specific completed action. "C\'était" ("it was") is the imparfait, used for background description or an ongoing state in the past. At this stage, just recognize both as "this already happened" — you don\'t need the full conjugation system yet to describe most things.',
+    keywords: ['j\'ai vu', 'c\'était', 'passé composé', 'imparfait', 'past tense', 'avoir vu'],
+  },
+  {
+    id: 'negative-imperative',
+    question: 'How do I say "don\'t do that" in French, like "ne touchez pas"?',
+    answer:
+      'Wrap the imperative in "ne… pas", same as any negative sentence: "touchez" (touch) → "ne touchez pas" (don\'t touch). With "tu" it works the same way: "ne touche pas". It\'s the same imperative form from Week 7\'s "signez"/"remplissez" — negating it costs you nothing extra to learn.',
+    keywords: ['ne touchez pas', 'negative imperative', 'don\'t', 'ne pas'],
+  },
+  {
+    id: 'travailler-dans-pour-chez',
+    question: 'What\'s the difference between "travailler dans", "pour", and "chez"?',
+    answer:
+      'They point at different pieces of your job: "dans" names the field or industry ("je travaille dans la finance"), "pour" names who you work for as an organization ("je travaille pour une banque"), and "chez" names a specific employer more casually, like saying "at" ("je travaille chez UBS"). Pick based on which piece of information you\'re actually giving.',
+    keywords: ['travailler dans', 'travailler pour', 'travailler chez', 'work in', 'work for'],
+  },
+  {
+    id: 'avant-apres',
+    question: 'What\'s the difference between "avant" and "après"?',
+    answer:
+      '"Avant" means "before" and "après" means "after" — opposites, easy to mix up under pressure. "Avant vendredi" (by/before Friday) sets a deadline; "après la réunion" (after the meeting) points to something that follows. Worth drilling as a pair, same as Week 2\'s "tout droit" vs "à droite".',
+    keywords: ['avant', 'après', 'before', 'after', 'deadline'],
+  },
+  {
+    id: 'mon-ma-mes',
+    question: 'Why do I say "ma sœur" even if I\'m a man — shouldn\'t "my" match me?',
+    answer:
+      '"Mon/ma/mes" agree with the noun they describe, not with the speaker. "Sœur" (sister) is feminine, so it\'s always "ma sœur" no matter who\'s talking — same for "mon frère" (brother, masculine) said by a woman. It\'s the same logic as un/une: the word\'s own gender decides the article, not the person using it. One extra wrinkle: before a feminine noun starting with a vowel sound, "ma" becomes "mon" for pronunciation — "mon amie" (my [female] friend), not "ma amie".',
+    keywords: ['mon', 'ma', 'mes', 'possessive', 'ma sœur', 'mon frère', 'my'],
+  },
+  {
+    id: 'tu-imperative',
+    question: 'How is "range ta chambre" different from the "vous" commands I learned before?',
+    answer:
+      'Same imperative idea, informal register — built from "tu" instead of "vous". Drop "tu" and keep the verb: "tu ranges" → "range !" (tidy up!), "tu éteins" → "éteins !" (turn off!). You\'d use this with family, close friends, or kids — anywhere "tu" is the natural pronoun (see Week 4\'s tu/vous rule). With people you don\'t know well, stick to the "vous" forms from Weeks 7–8.',
+    keywords: ['range ta chambre', 'tu imperative', 'informal command', 'eteins'],
+  },
+  {
+    id: 'aimer-adorer-detester',
+    question: 'How strong is "aimer" vs "adorer" vs "détester"?',
+    answer:
+      'Think of it as a scale: "détester" (hate) at one end, "ne pas aimer" (not like) mildly negative, "aimer" (like) mildly positive, and "adorer" (love) at the other end. All four work the same way grammatically — followed by a noun or an infinitive verb ("j\'aime lire", "j\'adore voyager") — so you only need to pick the right intensity, not learn new sentence structure for each one.',
+    keywords: ['aimer', 'adorer', 'détester', 'like', 'love', 'hate', 'préférer'],
+  },
+  {
+    id: 'jouer-a-de',
+    question: 'What\'s the difference between "jouer à" and "jouer de"?',
+    answer:
+      '"Jouer à" is for games and sports — "jouer au tennis", "jouer aux cartes" (cards). "Jouer de" is for musical instruments — "jouer du piano", "jouer de la guitare". Same verb "jouer" (to play), but the preposition tells you which kind of "playing" you mean.',
+    keywords: ['jouer à', 'jouer de', 'jouer au', 'jouer du', 'play instrument', 'play sport'],
+  },
 ]

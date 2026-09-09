@@ -68,18 +68,26 @@
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.week-switcher::-webkit-scrollbar {
+  display: none;
 }
 
 .week-switcher-item {
-  flex: 1;
+  flex-shrink: 0;
   border: 1px solid var(--border);
   background: var(--surface-2);
   border-radius: 10px;
-  padding: 8px;
+  padding: 8px 14px;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .week-switcher-item.active {
