@@ -11,11 +11,22 @@ and so there's exactly one place that knows its base URL.
 from __future__ import annotations
 
 import logging
+import ssl
 from typing import Any
 
 import aiohttp
+import certifi
 
 logger = logging.getLogger("orvchestra.radio")
+
+# A `uv`-managed Python on macOS has no reason to trust the system Keychain's
+# root certificates the way a python.org installer's "Install Certificates
+# .command" wires up -- without this, verifying radio-browser.info's TLS
+# certificate fails with "unable to get local issuer certificate" even
+# though the connection itself is fine. certifi ships a trusted CA bundle
+# that works the same on every platform, so this never depends on what a
+# given machine happens to have configured at the OS level.
+_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 # One of Radio Browser's official mirrors. Their docs describe resolving
 # `all.api.radio-browser.info` via DNS and picking one at random for load
@@ -45,6 +56,7 @@ async def search_stations(query: str, limit: int = 25) -> list[dict[str, Any]]:
         async with session.get(
             f"{_BASE_URL}/json/stations/search",
             params={"name": query, "limit": limit, "hidebroken": "true", "order": "votes", "reverse": "true"},
+            ssl=_SSL_CONTEXT,
         ) as resp:
             resp.raise_for_status()
             data = await resp.json()
