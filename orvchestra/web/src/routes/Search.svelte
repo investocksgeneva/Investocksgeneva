@@ -8,6 +8,9 @@
   let results = $state({ artists: [], albums: [], tracks: [] });
   let searching = $state(false);
   let timer;
+  let genres = $state([]);
+
+  api.genres().then((g) => (genres = g));
 
   function onInput() {
     clearTimeout(timer);
@@ -36,6 +39,17 @@
 
 {#if query.trim() && !searching && !hasAnyResults}
   <p class="empty-state">No matches for "{query}".</p>
+{/if}
+
+{#if !query.trim() && genres.length}
+  <div class="section-title">Browse by genre</div>
+  <div class="chip-row">
+    {#each genres as genre (genre.id)}
+      <button class="chip" onclick={() => navigate(`/genre/${encodeURIComponent(genre.id)}`)}>
+        {genre.name}
+      </button>
+    {/each}
+  </div>
 {/if}
 
 {#if results.artists.length}
