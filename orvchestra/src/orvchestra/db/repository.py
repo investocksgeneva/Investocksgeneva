@@ -309,6 +309,60 @@ def get_artwork(conn: sqlite3.Connection, art_hash: str) -> sqlite3.Row | None:
     return conn.execute("SELECT * FROM artwork WHERE hash = ?", (art_hash,)).fetchone()
 
 
+# --- search ----------------------------------------------------------------
+#
+# Prefix matching via FTS5 gives instant, as-you-type results, but it is not
+# typo-tolerant (a genuine misspelling like "beetles" won't find "Beatles").
+# Real fuzzy matching would want a trigram index or an edit-distance rerank
+# on top of this; not built here since it's a real chunk of extra work for a
+# personal library where you mostly know what you're typing. Revisit if it
+# turns out to matter in practice.
+
+def _fts_prefix_query(text: str) -> str | None:
+    tokens = [t.replace('"', '""') for t in text.strip().split() if t]
+    if not tokens:
+        return None
+    return " ".join(f'"{t}"*' for t in tokens)
+
+
+def search_tracks(conn: sqlite3.Connection, query: str, limit: int = 50) -> list[sqlite3.Row]:
+    match = _fts_prefix_query(query)
+    if match is None:
+        return []
+    return conn.execute(
+        """
+        SELECT tracks.* FROM tracks_fts
+        JOIN tracks ON tracks.id = tracks_fts.rowid
+        WHERE tracks_fts MATCH ?
+        ORDER BY bm25(tracks_fts)
+        LIMIT ?
+        """,
+        (match, limit),
+    ).fetchall()
+
+
+def _like_pattern(text: str) -> str:
+    escaped = text.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
+def search_artists(conn: sqlite3.Connection, query: str, limit: int = 20) -> list[sqlite3.Row]:
+    pattern = _like_pattern(query)
+    return conn.execute(
+        "SELECT * FROM v_artists WHERE artist LIKE ? ESCAPE '\\' COLLATE NOCASE ORDER BY artist LIMIT ?",
+        (pattern, limit),
+    ).fetchall()
+
+
+def search_albums(conn: sqlite3.Connection, query: str, limit: int = 20) -> list[sqlite3.Row]:
+    pattern = _like_pattern(query)
+    return conn.execute(
+        "SELECT * FROM v_albums WHERE (album LIKE ? ESCAPE '\\' OR album_artist LIKE ? ESCAPE '\\') COLLATE NOCASE "
+        "ORDER BY album LIMIT ?",
+        (pattern, pattern, limit),
+    ).fetchall()
+
+
 def library_stats(conn: sqlite3.Connection) -> dict:
     total = conn.execute("SELECT COUNT(*) AS n FROM tracks").fetchone()["n"]
     online = conn.execute("SELECT COUNT(*) AS n FROM tracks WHERE online = 1").fetchone()["n"]

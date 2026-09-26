@@ -42,3 +42,21 @@ def logs_dir() -> Path:
     path = app_data_dir() / "logs"
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def web_dist_dir() -> Path:
+    """Where the built PWA (`web/dist`, from `npm run build`) lives.
+
+    Defaults to the `web/dist` folder next to this checkout's `pyproject.toml`
+    -- fine for running from a source checkout via `uv run`/`orvchestra
+    serve`, which is the only way this is meant to be run in Phase 3. This
+    is not resolved as installed package data, so it won't survive a `pip
+    install` of a built wheel; revisit if Orvchestra ever needs to be
+    distributed that way.
+    """
+    override = os.environ.get("ORVCHESTRA_WEB_DIST")
+    if override:
+        return Path(override).expanduser()
+    # src/orvchestra/paths.py -> src/orvchestra -> src -> <project root>
+    project_root = Path(__file__).resolve().parents[2]
+    return project_root / "web" / "dist"

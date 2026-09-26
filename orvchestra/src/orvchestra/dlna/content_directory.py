@@ -119,9 +119,7 @@ def _metadata(conn: sqlite3.Connection, object_id: str, media_base_url: str) -> 
         row = repo.get_track(conn, ids.decode_track_id(object_id))
         if row is None:
             raise UpnpActionError(error_code=701, error_desc="No such object")
-        album_artist = "Various Artists" if row["compilation"] else (row["album_artist"] or row["artist"] or "Unknown Artist")
-        album = row["album"] or "Unknown Album"
-        parent_id = ids.album_id(album_artist, album, row["year"])
+        parent_id = ids.album_id(*didl.canonical_album_key(row))
         return didl.build_track_element(row, parent_id, media_base_url)
 
     raise UpnpActionError(error_code=701, error_desc="No such object")

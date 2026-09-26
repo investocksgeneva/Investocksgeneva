@@ -1,0 +1,68 @@
+<script>
+  import { onMount } from "svelte";
+  import { route, navigate } from "./lib/router.svelte.js";
+  import { player, initPlayer, bindAudioElement } from "./lib/player.svelte.js";
+  import MiniPlayer from "./lib/MiniPlayer.svelte";
+  import Home from "./routes/Home.svelte";
+  import Search from "./routes/Search.svelte";
+  import Artist from "./routes/Artist.svelte";
+  import Album from "./routes/Album.svelte";
+  import Genre from "./routes/Genre.svelte";
+  import Year from "./routes/Year.svelte";
+  import NowPlaying from "./routes/NowPlaying.svelte";
+  import Queue from "./routes/Queue.svelte";
+  import Playlists from "./routes/Playlists.svelte";
+
+  let audioEl;
+
+  onMount(() => {
+    bindAudioElement(audioEl);
+    initPlayer();
+  });
+
+  function decodeSegment(path, prefix) {
+    return decodeURIComponent(path.slice(prefix.length));
+  }
+
+  const screen = $derived.by(() => {
+    const path = route.path;
+    if (path === "/") return { component: Home, props: {} };
+    if (path === "/search") return { component: Search, props: {} };
+    if (path.startsWith("/artist/")) return { component: Artist, props: { id: decodeSegment(path, "/artist/") } };
+    if (path.startsWith("/album/")) return { component: Album, props: { id: decodeSegment(path, "/album/") } };
+    if (path.startsWith("/genre/")) return { component: Genre, props: { id: decodeSegment(path, "/genre/") } };
+    if (path.startsWith("/year/")) return { component: Year, props: { year: decodeSegment(path, "/year/") } };
+    if (path === "/now-playing") return { component: NowPlaying, props: {} };
+    if (path === "/queue") return { component: Queue, props: {} };
+    if (path === "/playlists") return { component: Playlists, props: {} };
+    return { component: Home, props: {} };
+  });
+
+  const tabs = [
+    { path: "/", label: "Home", icon: "🏠" },
+    { path: "/search", label: "Search", icon: "🔍" },
+    { path: "/queue", label: "Queue", icon: "🎵" },
+    { path: "/playlists", label: "Playlists", icon: "📃" },
+  ];
+
+  function isTabActive(tabPath) {
+    return tabPath === "/" ? route.path === "/" : route.path.startsWith(tabPath);
+  }
+</script>
+
+<audio bind:this={audioEl} preload="metadata"></audio>
+
+<main class="screen">
+  <screen.component {...screen.props} />
+</main>
+
+<MiniPlayer />
+
+<nav class="tabbar">
+  {#each tabs as tab (tab.path)}
+    <button class:active={isTabActive(tab.path)} onclick={() => navigate(tab.path)}>
+      <span class="tab-icon">{tab.icon}</span>
+      <span>{tab.label}</span>
+    </button>
+  {/each}
+</nav>

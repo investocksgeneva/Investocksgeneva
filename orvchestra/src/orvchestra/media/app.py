@@ -1,10 +1,6 @@
 """The HTTP media layer: range-request file streaming and cached-artwork
-serving. This is what the WiiM (and, in later phases, a browser) actually
-fetches bytes from -- the DLNA server only ever hands out URLs into this
-app. Kept on its own FastAPI/uvicorn process port rather than folded into
-the aiohttp app the DLNA control-plane runs on, since this is the piece
-Phase 3 (browser playback) and Phase 5 (transcoding) build directly on top
-of, per the architecture's "HTTP media endpoints" box.
+serving. This is what the WiiM, and now the web app/browser, actually fetch
+bytes from -- the DLNA server only ever hands out URLs into this router.
 
 Range/206 support comes for free from Starlette's `FileResponse` -- no
 hand-rolled byte-range parsing needed.
@@ -15,21 +11,21 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, FastAPI, HTTPException
 from starlette.responses import FileResponse
 
 from orvchestra.db import repository as repo
 from orvchestra.dlna.protocol_info import dlna_content_features, mime_type_for
 
 
-def create_media_app(conn: sqlite3.Connection) -> FastAPI:
-    app = FastAPI(title="Orvchestra media", docs_url=None, redoc_url=None)
+def build_media_router(conn: sqlite3.Connection) -> APIRouter:
+    router = APIRouter()
 
     # DLNA/UPnP renderers routinely HEAD a resource before GETting it, to read
     # Content-Type/Content-Length/Accept-Ranges up front -- this FastAPI/
     # Starlette version doesn't synthesize HEAD from GET automatically, so
     # both routes register it explicitly.
-    @app.api_route("/track/{track_id}.{ext}", methods=["GET", "HEAD"])
+    @router.api_route("/track/{track_id}.{ext}", methods=["GET", "HEAD"])
     async def stream_track(track_id: int, ext: str) -> FileResponse:
         row = repo.get_track(conn, track_id)
         if row is None:
@@ -51,7 +47,7 @@ def create_media_app(conn: sqlite3.Connection) -> FastAPI:
             },
         )
 
-    @app.api_route("/art/{art_hash}/{size}.jpg", methods=["GET", "HEAD"])
+    @router.api_route("/art/{art_hash}/{size}.jpg", methods=["GET", "HEAD"])
     async def get_art(art_hash: str, size: int) -> FileResponse:
         if size not in (300, 1000):
             raise HTTPException(404, "No such thumbnail size (use 300 or 1000)")
@@ -64,4 +60,14 @@ def create_media_app(conn: sqlite3.Connection) -> FastAPI:
             raise HTTPException(404, "Thumbnail missing from cache")
         return FileResponse(thumb_path, media_type="image/jpeg")
 
+    return router
+
+
+def create_media_app(conn: sqlite3.Connection) -> FastAPI:
+    """A standalone app with just the media routes -- kept for the Phase 2
+    test suite and for anyone who wants the media endpoint without the rest
+    of the web app. `orvchestra serve` uses `build_media_router` directly,
+    mounted alongside the JSON API and the PWA on one app."""
+    app = FastAPI(title="Orvchestra media", docs_url=None, redoc_url=None)
+    app.include_router(build_media_router(conn))
     return app

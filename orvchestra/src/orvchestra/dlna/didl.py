@@ -41,13 +41,23 @@ def _format_duration(seconds: float | None) -> str | None:
     return f"{hours}:{minutes:02d}:{secs:02d}.{ms:03d}"
 
 
-def _stream_uri(media_base_url: str, track_row) -> str:
+def stream_uri(media_base_url: str, track_row) -> str:
     # A file extension on the URL is cosmetic (some renderers sniff by
     # extension as a fallback when protocolInfo parsing is flaky), so we
     # add the real one even though the endpoint itself only cares about the
     # numeric id.
     ext = {"FLAC": "flac", "MP3": "mp3", "WAV": "wav", "AAC": "m4a", "ALAC": "m4a"}.get(track_row["codec"], "bin")
     return f"{media_base_url}/track/{track_row['id']}.{ext}"
+
+
+def canonical_album_key(track_row) -> tuple[str, str, int | None]:
+    """The `(album_artist, album, year)` triple a track's row belongs to in
+    `v_albums` -- shared by ContentDirectory's BrowseMetadata and the
+    playback service, so "what album is this track's canonical parent"
+    is computed in exactly one place."""
+    album_artist = "Various Artists" if track_row["compilation"] else (track_row["album_artist"] or track_row["artist"] or "Unknown Artist")
+    album = track_row["album"] or "Unknown Album"
+    return album_artist, album, track_row["year"]
 
 
 def build_track_element(track_row, parent_id: str, media_base_url: str) -> ET.Element:
@@ -87,7 +97,7 @@ def build_track_element(track_row, parent_id: str, media_base_url: str) -> ET.El
         res_attrib["bitrate"] = str(int(track_row["bitrate"] * 1000 / 8))
 
     res_el = ET.SubElement(element, "res", res_attrib)
-    res_el.text = _stream_uri(media_base_url, track_row)
+    res_el.text = stream_uri(media_base_url, track_row)
     return element
 
 
