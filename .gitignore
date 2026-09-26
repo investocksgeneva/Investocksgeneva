@@ -16,6 +16,11 @@ eggs/
 .eggs/
 lib/
 lib64/
+# The bare "lib/" pattern above (standard Python .gitignore boilerplate,
+# meant for venv-style lib/ dirs) also matches orvchestra/web/src/lib/, a
+# real source directory of frontend helper modules -- un-ignore it.
+!orvchestra/web/src/lib/
+!orvchestra/web/src/lib/**
 parts/
 sdist/
 var/

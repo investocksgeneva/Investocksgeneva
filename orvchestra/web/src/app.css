@@ -323,6 +323,19 @@ h3 {
   margin-top: 10px;
 }
 
+.star-rating {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.star-rating button {
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--accent);
+  padding: 4px;
+}
+
 .seek-bar {
   width: 100%;
   margin-top: 22px;

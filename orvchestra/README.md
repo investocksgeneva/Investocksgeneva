@@ -6,11 +6,12 @@ entirely on hardware you already own: your Mac as the server, a WiiM Amp Pro
 the remote. Zero subscriptions, zero cloud, your files never move.
 
 This repository is built one phase at a time; see the project's phase plan
-for the full roadmap (listening history, in-browser playback, family
-sharing). **This README currently documents Phases 1–3**: the library
-engine, the DLNA MediaServer, and now a full web app with a "Play on WiiM"
-control point — the whole day-to-day experience the project set out to
-build, minus history/stats (Phase 4) and a few conveniences (Phase 5+).
+for the full roadmap (in-browser transcoded playback, family sharing).
+**This README currently documents Phases 1–4**: the library engine, the
+DLNA MediaServer, a full web app with a "Play on WiiM" control point, and
+now listening history, stats, and rule-based smart playlists — the whole
+day-to-day experience the project set out to build, minus a few
+conveniences left for Phase 5+.
 
 ## Requirements
 
@@ -334,21 +335,116 @@ shell's `PATH`.
 7. `scripts/install.sh`, then log out and back in (or reboot), and confirm
    `orvchestra serve` is already running without you doing anything.
 
+## Phase 4: listening history, stats, and smart playlists
+
+### Recording a play
+
+`PlaybackService` (`playback/service.py`) tracks a play session for whatever
+track is current, on any output, and records a `plays` row once the
+listened-to position crosses **50% of the track's duration or 4 minutes,
+whichever is smaller** — a 3-minute song counts at 90 seconds, a 20-minute
+one counts at 4 minutes, not 10. Position comes from two places depending
+on output:
+
+- **WiiM output**: the existing 1-second poll loop's `DmrDevice.media_position`
+  feeds the same threshold check that already drove gapless queueing.
+- **This device**: the frontend's `<audio>` element reports its position
+  via `POST /api/playback/progress`, throttled to once per 5 seconds (plus
+  once more on `ended`, so a short track's final few seconds aren't missed
+  between throttled reports).
+
+Pausing and resuming never resets or double-counts progress (the session is
+keyed to "this track is current," not to a particular play/pause cycle),
+and the gapless-auto-advance path starts a **fresh** session for the new
+track before recording any of its position, so a play never gets attributed
+to the track that just finished — both are directly tested in
+`test_playback_service.py` against the same fake-renderer harness Phase 3
+introduced.
+
+### Stats (`GET /api/stats/*`)
+
+- `/summary?period=7|30|90|365|all` — total listening time, play count, and
+  format mix over the period.
+- `/top?kind=tracks|artists|albums&period=...` — ranked by play count.
+  Albums and artists use the two different attribution rules already
+  established: album grouping folds compilations into "Various Artists"
+  (matching `v_albums`), but artist stats credit a compilation track to its
+  *own* artist, since "who did you actually listen to" and "which browsable
+  album is this" are different questions with different right answers.
+- `/wrapped/{year}` — the same top-lists and format mix, scoped to one
+  calendar year, for a "Spotify Wrapped"-style yearly summary.
+- `/encore?months=12` — albums played before but not in the last N months;
+  this is also what the Home screen's "Rediscover" section is (the phase
+  plan names the same idea twice, once per phase, so they're implemented as
+  one thing).
+
+### Smart playlists (`/api/playlists`)
+
+A smart playlist is a `playlists` row (`is_smart=1`) holding a small JSON
+rule set (`playlists.rules_json`) rather than a stored track list: genre,
+year range, minimum rating, minimum play count, and last-played-before/after
+windows, combined with `AND` and evaluated fresh against the library on
+every view (`repository.evaluate_smart_playlist`). There's no manual/static
+playlist creation yet — only what the phase plan explicitly asked for
+("smart playlists defined by rules") is built; `playlist_items` still sits
+unused in the schema for whenever that's added.
+
+Ratings are new too: `tracks.rating` (1-5, or unset), settable via
+`POST /api/tracks/{id}/rating` and shown as a tappable star row on Now
+Playing.
+
+### Frontend
+
+A new **Stats** tab (period picker, top tracks/artists/albums, format mix,
+a year input for Wrapped, and an Encore album grid) and an expanded
+**Playlists** screen: a rule-builder form (name, genre, year range, minimum
+rating, minimum plays, sort) that creates a smart playlist via `POST
+/api/playlists`, a list of existing ones, and tap-to-expand-and-play on
+each. Home's "Recently played" and "Rediscover" sections, empty placeholders
+since Phase 3, now show real data.
+
+### A first real schema migration
+
+Phase 4 is the first time a column needed adding to a table that might
+already hold real data (`tracks.rating`; `playlists.is_smart`,
+`.rules_json`). `db/schema.py`'s `_ensure_column` checks `PRAGMA table_info`
+and runs `ALTER TABLE ... ADD COLUMN` for anything missing, on every
+connection — the smallest thing that could work for purely-additive
+nullable columns, and explicitly not a real migrations framework (no
+renaming, no removing, no ordering across multiple changes). `README`'s
+Phase 1 "no migration framework yet" caveat said this day would come;
+`test_schema_migration.py` builds a genuine pre-Phase-4 database (from the
+current `DDL` alone, which never mentions these three columns) and proves
+`connect()` upgrades it correctly and idempotently.
+
+### Verifying this by hand
+
+1. Play a track past its halfway point (or past 4 minutes on a long one),
+   check `GET /api/stats/summary?period=all` and confirm the play count and
+   listening time went up.
+2. Rate a few tracks from Now Playing, build a smart playlist filtering on
+   "4+ stars," and confirm only those tracks show up.
+3. Check the Stats tab's top lists after some real listening; switch
+   periods and confirm the numbers actually change.
+4. Play an album, wait 12+ months (or, more practically, directly insert an
+   old `plays` row for testing), and confirm it shows up under Encore /
+   Home's Rediscover section.
+
 ## Data model
 
 The full schema (`src/orvchestra/db/schema.py`) is created on first
-connection, WAL-mode SQLite with an FTS5 index over track metadata for the
-search screen coming in Phase 3. `albums` and `artists` are SQL views
-(`v_albums`, `v_artists`) grouped from `tracks`, not separately maintained
-tables — that keeps them impossible to desync, and a `GROUP BY` over an
-indexed column stays fast well past 300k tracks. Compilations are grouped
-under "Various Artists" regardless of what each track's own artist tag
-says; multi-disc albums are one row (their per-disc tracks all share the
-same `(album_artist, album, year)` grouping key).
+connection, WAL-mode SQLite with an FTS5 index over track metadata backing
+Phase 3's search. `albums` and `artists` are SQL views (`v_albums`,
+`v_artists`) grouped from `tracks`, not separately maintained tables — that
+keeps them impossible to desync, and a `GROUP BY` over an indexed column
+stays fast well past 300k tracks. Compilations are grouped under "Various
+Artists" regardless of what each track's own artist tag says; multi-disc
+albums are one row (their per-disc tracks all share the same
+`(album_artist, album, year)` grouping key).
 
-`playlists`, `playlist_items`, `plays`, and `users` tables exist in the
-schema now (per the target data model) but are unused until their
-respective phases.
+`plays` (Phase 4) and `playlists`/`is_smart`/`rules_json` (Phase 4) are now
+in active use; `playlist_items` and `users` still sit unused in the schema
+for Phase 6.
 
 ## Running the tests
 
@@ -394,17 +490,32 @@ touches real music. Coverage includes:
 - `KeepAwakeController`'s multi-source active/inactive bookkeeping,
   including the real (not mocked) `FileNotFoundError` path this test suite
   hits every time, since `caffeinate` genuinely isn't on Linux
+- the play-recording threshold logic: a short track counting at 50%, a long
+  one capped at 4 minutes, pause/resume never duplicating or losing
+  progress, gapless auto-advance starting a genuinely fresh session for the
+  new track (not misattributing its early position to the track that just
+  ended), and this-device plays recording via reported position the same
+  way a WiiM play does
+- the stats/history repository queries (top tracks/artists/albums, period
+  filtering, format mix, recently-played vs. Encore) and the full
+  `/api/stats/*` and `/api/playlists` HTTP surface, including smart
+  playlist create/evaluate/delete
+- a from-scratch pre-Phase-4 database (built from `schema.DDL` alone, which
+  never mentions `rating`/`is_smart`/`rules_json`) actually getting upgraded
+  by `connect()`, twice in a row without error -- proof the first real
+  schema migration works, not just that it compiles
 
 **Not covered by the automated suite: the frontend itself.** There's no
 Playwright/browser-level testing here — the Svelte app was verified by
 building it (`npm run build`, which does catch real compile errors — it did,
-twice, during development; see the Phase 3 trade-offs) and by driving the
-live backend it talks to with `curl` end-to-end (every screen's API calls,
-the queue/playback control flow, the SPA fallback, real byte-identical
-streaming) rather than by rendering it in an actual browser. Say so plainly
-rather than claim UI correctness this repo hasn't actually checked: the
-manual steps under "Phase 3" above are what actually exercises the UI, and
-they need a real browser and, for the WiiM steps, real hardware.
+in every phase's frontend work so far; see the Phase 3 trade-offs) and by
+driving the live backend it talks to with `curl` end-to-end (every screen's
+API calls, the queue/playback control flow, the SPA fallback, real
+byte-identical streaming) rather than by rendering it in an actual browser.
+Say so plainly rather than claim UI correctness this repo hasn't actually
+checked: the manual steps under "Phase 3" and "Phase 4" above are what
+actually exercises the UI, and they need a real browser and, for the WiiM
+steps, real hardware.
 
 ## What to check by hand after Phase 1
 
@@ -521,3 +632,27 @@ they need a real browser and, for the WiiM steps, real hardware.
   simple vinyl-record glyph) rather than real artwork — swap them for a
   real logo whenever you have one; the manifest/service-worker plumbing
   around them doesn't care what the icon looks like.
+- **A this-device play can go unrecorded if the tab closes before the next
+  5-second progress report** (or before `ended` fires). The DLNA path has
+  no equivalent gap, since the backend's own poll loop drives it
+  independently of the browser being open. Shortening the throttle window
+  would narrow this at the cost of more chatter; not worth it unless it
+  turns out to matter in practice.
+- **No per-user history.** `plays.user_id` exists in the schema (for Phase
+  6) but is always `NULL` right now — every play is attributed to "the"
+  listener, which is correct for a single-person library and will need
+  revisiting once Phase 6 adds real accounts.
+- **Smart playlist rules are `AND`-only**, with no "any of" / "none of"
+  composition and no rule for "in this specific album/artist" beyond what
+  genre/year/rating/play-count/last-played already cover. Covers what the
+  phase plan asked for; a real rule-expression language is a bigger feature
+  than this phase needed.
+- **No manual (static) playlists yet.** `playlist_items` still sits unused
+  in the schema exactly as Phase 1 left it — only rule-based smart
+  playlists were in scope for Phase 4. Add-to-playlist / drag-to-reorder is
+  future work.
+- **"Rediscover" and "Encore" are the same feature**, deliberately, rather
+  than two similar-but-different ones — the phase plan names the same idea
+  in both Phase 3's Home bullet and Phase 4's stats bullet, and building it
+  twice with subtly different semantics would be worse than picking one
+  definition and using it in both places.

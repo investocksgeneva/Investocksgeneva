@@ -1,9 +1,15 @@
 """The full SQLite schema, applied idempotently on every connection.
 
-There is no migration framework yet: every statement is CREATE ... IF NOT
-EXISTS, so re-running it against an existing database is a no-op. That is
-fine for v1. Once the schema needs to change under users with existing data,
-replace this with a numbered-migrations approach keyed off `schema_meta`.
+Most of this is still CREATE ... IF NOT EXISTS, a no-op against an existing
+database. Phase 4 is the first time a column needed adding to a table that
+might already hold real data (`tracks.rating`, `playlists.is_smart`,
+`playlists.rules_json`), so `_ensure_column` below does the smallest thing
+that could work: check `PRAGMA table_info` and `ALTER TABLE ... ADD COLUMN`
+if it's missing. That's still short of a real numbered-migrations
+framework (there's no way to *remove* or *rename* a column this way, and no
+ordering across multiple such changes) -- fine for purely-additive nullable
+columns, not fine once a change needs more than that. Replace this with a
+proper migrations approach keyed off `schema_meta` before that day comes.
 
 `albums` and `artists` are intentionally SQL views, not tables: at 300k
 tracks a GROUP BY over an indexed column is still a few milliseconds, and a
@@ -14,7 +20,9 @@ shows it matters.
 
 from __future__ import annotations
 
-SCHEMA_VERSION = 1
+import sqlite3
+
+SCHEMA_VERSION = 2
 
 DDL = """
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -216,8 +224,21 @@ WHERE rn = 1;
 """
 
 
-def apply_schema(conn) -> None:
+def _ensure_column(conn: sqlite3.Connection, table: str, column: str, column_def: str) -> None:
+    existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+    if column not in existing:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column_def}")
+
+
+def apply_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(DDL)
+
+    # Phase 4 additions to tables that predate it -- see the module
+    # docstring for why this is a hand-rolled ALTER rather than DDL above.
+    _ensure_column(conn, "tracks", "rating", "rating INTEGER")
+    _ensure_column(conn, "playlists", "is_smart", "is_smart INTEGER NOT NULL DEFAULT 0")
+    _ensure_column(conn, "playlists", "rules_json", "rules_json TEXT")
+
     conn.execute(
         "INSERT INTO schema_meta(key, value) VALUES ('schema_version', ?) "
         "ON CONFLICT(key) DO UPDATE SET value = excluded.value",

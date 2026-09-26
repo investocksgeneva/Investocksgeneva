@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import sqlite3
+from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
@@ -31,6 +32,11 @@ logger = logging.getLogger("orvchestra.playback")
 
 THIS_DEVICE = "this-device"
 _POLL_INTERVAL_SECONDS = 1.0
+
+# "Count a play after 50% or 4 minutes, whichever comes first" -- so the
+# threshold is whichever of those two is *smaller*: a 3-minute track counts
+# at 90s (50%), a 20-minute one counts at 4 minutes, not 10.
+_MAX_PLAY_THRESHOLD_SECONDS = 240.0
 
 
 def _track_summary(row: sqlite3.Row) -> dict[str, Any]:
@@ -48,7 +54,22 @@ def _track_summary(row: sqlite3.Row) -> dict[str, Any]:
         "sample_rate": row["sample_rate"],
         "bit_depth": row["bit_depth"],
         "art_hash": row["art_hash"],
+        "rating": row["rating"],
     }
+
+
+@dataclass
+class _PlaySession:
+    """Tracks progress toward the play-counting threshold for whichever
+    track is currently current, regardless of output -- fed by the DLNA poll
+    loop's position updates or by the browser's own progress reports
+    (`PlaybackService.report_browser_position`)."""
+
+    track_id: int
+    threshold_seconds: float
+    started_at: str
+    max_position_seen: float = 0.0
+    recorded: bool = False
 
 
 class PlaybackService:
@@ -65,6 +86,7 @@ class PlaybackService:
 
         self._pushed_next_track_id: int | None = None
         self._poll_task: asyncio.Task | None = None
+        self._play_session: _PlaySession | None = None
 
     # --- outputs ------------------------------------------------------
 
@@ -135,8 +157,12 @@ class PlaybackService:
 
     async def play_current(self) -> None:
         track_id = self.current_track_id()
+        if track_id is None:
+            return
+        self._start_play_session(track_id)
+
         renderer = self.active_renderer
-        if track_id is None or renderer is None:
+        if renderer is None:
             return
         url, title, metadata = self._track_url_and_metadata(track_id)
         await renderer.async_set_transport_uri(url, title, meta_data=metadata)
@@ -195,6 +221,34 @@ class PlaybackService:
     def set_browser_playing(self, playing: bool) -> None:
         self.keep_awake.set_active("browser", playing)
 
+    def report_browser_position(self, position_seconds: float) -> None:
+        """Called by the frontend's <audio> element (throttled) so a
+        this-device play gets recorded the same way a WiiM one does, via
+        the same threshold logic."""
+        self._note_position(position_seconds)
+
+    # --- listening history (plays) ---------------------------------------
+
+    def _start_play_session(self, track_id: int) -> None:
+        row = repo.get_track(self.conn, track_id)
+        duration = row["duration_seconds"] if row else None
+        threshold = min(duration * 0.5, _MAX_PLAY_THRESHOLD_SECONDS) if duration else _MAX_PLAY_THRESHOLD_SECONDS
+        self._play_session = _PlaySession(
+            track_id=track_id,
+            threshold_seconds=threshold,
+            started_at=repo.iso_now_minus_days(0),
+        )
+
+    def _note_position(self, position_seconds: float | None) -> None:
+        session = self._play_session
+        if session is None or position_seconds is None:
+            return
+        session.max_position_seen = max(session.max_position_seen, position_seconds)
+        if not session.recorded and session.max_position_seen >= session.threshold_seconds:
+            device = "browser" if self.active_output == THIS_DEVICE else "wiim"
+            repo.record_play(self.conn, session.track_id, session.started_at, session.max_position_seen, device)
+            session.recorded = True
+
     # --- now playing ------------------------------------------------------
 
     def now_playing(self) -> dict[str, Any]:
@@ -248,17 +302,25 @@ class PlaybackService:
             logger.warning("renderer poll failed: %s", exc)
             return
 
-        state = renderer.transport_state
-        self.keep_awake.set_active(self._renderer_keepawake_id(), state == TransportState.PLAYING)
-
         if self._pushed_next_track_id is not None:
             expected_url, _, _ = self._track_url_and_metadata(self._pushed_next_track_id)
             if renderer.av_transport_uri == expected_url:
                 # The renderer consumed NextAVTransportURI on its own: the
-                # queue has silently, gaplessly advanced.
+                # queue has silently, gaplessly advanced. Start tracking a
+                # fresh play session for the new track *before* noting
+                # position below, so this tick's position isn't attributed
+                # to the track that just finished.
                 self.queue_position += 1
                 self._pushed_next_track_id = None
+                new_track_id = self.current_track_id()
+                if new_track_id is not None:
+                    self._start_play_session(new_track_id)
                 await self._push_next_if_needed()
+
+        self._note_position(renderer.media_position)
+
+        state = renderer.transport_state
+        self.keep_awake.set_active(self._renderer_keepawake_id(), state == TransportState.PLAYING)
 
         if state == TransportState.STOPPED and self.next_track_id() is None:
             self._cancel_poll_task()

@@ -10,10 +10,20 @@
     selectOutput,
     refreshOutputs,
   } from "../lib/player.svelte.js";
-  import { formatDuration, hiResBadge } from "../lib/api.js";
+  import { api, formatDuration, hiResBadge } from "../lib/api.js";
 
   let seeking = $state(false);
   let seekValue = $state(0);
+
+  async function rate(value) {
+    const track = player.currentTrack;
+    if (!track) return;
+    // A tap on the currently-set star clears the rating rather than
+    // re-setting the same value, so there's a way to un-rate a track.
+    const newRating = track.rating === value ? null : value;
+    await api.setRating(track.id, newRating);
+    track.rating = newRating;
+  }
 
   onMount(() => {
     refreshOutputs();
@@ -47,6 +57,14 @@
     {#if hiResBadge(player.currentTrack)}
       <span class="badge">{hiResBadge(player.currentTrack)}</span>
     {/if}
+
+    <div class="star-rating">
+      {#each [1, 2, 3, 4, 5] as value (value)}
+        <button aria-label={`Rate ${value} star${value === 1 ? "" : "s"}`} onclick={() => rate(value)}>
+          {(player.currentTrack.rating ?? 0) >= value ? "★" : "☆"}
+        </button>
+      {/each}
+    </div>
 
     <input
       class="seek-bar"

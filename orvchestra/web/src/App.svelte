@@ -12,6 +12,7 @@
   import NowPlaying from "./routes/NowPlaying.svelte";
   import Queue from "./routes/Queue.svelte";
   import Playlists from "./routes/Playlists.svelte";
+  import Stats from "./routes/Stats.svelte";
 
   let audioEl;
 
@@ -35,6 +36,7 @@
     if (path === "/now-playing") return { component: NowPlaying, props: {} };
     if (path === "/queue") return { component: Queue, props: {} };
     if (path === "/playlists") return { component: Playlists, props: {} };
+    if (path === "/stats") return { component: Stats, props: {} };
     return { component: Home, props: {} };
   });
 
@@ -43,6 +45,7 @@
     { path: "/search", label: "Search", icon: "🔍" },
     { path: "/queue", label: "Queue", icon: "🎵" },
     { path: "/playlists", label: "Playlists", icon: "📃" },
+    { path: "/stats", label: "Stats", icon: "📊" },
   ];
 
   function isTabActive(tabPath) {

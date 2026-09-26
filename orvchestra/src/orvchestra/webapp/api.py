@@ -18,7 +18,7 @@ import sqlite3
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from orvchestra.db import repository as repo
 from orvchestra.dlna import didl, ids
@@ -43,6 +43,14 @@ class VolumeRequest(BaseModel):
 
 class BrowserStateRequest(BaseModel):
     playing: bool
+
+
+class ProgressRequest(BaseModel):
+    position_seconds: float
+
+
+class RatingRequest(BaseModel):
+    rating: int | None = Field(default=None, ge=1, le=5)
 
 
 def _art_urls(media_base_url: str, art_hash: str | None) -> dict[str, str | None]:
@@ -72,6 +80,7 @@ def _track_json(row: sqlite3.Row, media_base_url: str) -> dict[str, Any]:
         "bit_depth": row["bit_depth"],
         "channels": row["channels"],
         "online": bool(row["online"]),
+        "rating": row["rating"],
         **_art_urls(media_base_url, row["art_hash"]),
     }
 
@@ -98,28 +107,60 @@ def _artist_json(row: sqlite3.Row) -> dict[str, Any]:
     return {"id": ids.artist_id(row["artist"]), "artist": row["artist"], "album_count": row["album_count"], "track_count": row["track_count"]}
 
 
-def build_api_router(conn: sqlite3.Connection, media_base_url: str, playback: PlaybackService) -> APIRouter:
-    router = APIRouter(prefix="/api")
+def albums_with_extra(conn: sqlite3.Connection, album_json_fn, rows: list[sqlite3.Row], extra_key: str) -> list[dict[str, Any]]:
+    """Stats/history queries (`repository.top_albums`, `recently_played_albums`,
+    `encore_albums`) return `(album_artist, album, year, <extra_key>)` rows,
+    not the full `v_albums` shape a card needs (art, track_count, ...) --
+    this re-looks each one up and merges in the one extra field. Shared
+    between `home()` here and `stats_api.py`."""
+    result = []
+    for row in rows:
+        full = repo.get_album(conn, row["album_artist"], row["album"], row["year"])
+        if full is not None:
+            result.append({**album_json_fn(full), extra_key: row[extra_key]})
+    return result
 
-    def album_art(row: sqlite3.Row) -> str | None:
-        return repo.get_album_art_hash(conn, row["album_artist"], row["album"], row["year"])
 
-    def album_json(row: sqlite3.Row) -> dict[str, Any]:
-        return _album_json(row, media_base_url, album_art(row))
+def make_track_json_fn(media_base_url: str):
+    """Shared by every router that needs to shape a `tracks` row into JSON
+    (this module, `stats_api.py`, `playlists_api.py`), so there is exactly
+    one place that decides what a track looks like over the wire."""
 
     def track_json(row: sqlite3.Row) -> dict[str, Any]:
         return _track_json(row, media_base_url)
+
+    return track_json
+
+
+def make_album_json_fn(conn: sqlite3.Connection, media_base_url: str):
+    def album_json(row: sqlite3.Row) -> dict[str, Any]:
+        art_hash = repo.get_album_art_hash(conn, row["album_artist"], row["album"], row["year"])
+        return _album_json(row, media_base_url, art_hash)
+
+    return album_json
+
+
+def build_api_router(conn: sqlite3.Connection, media_base_url: str, playback: PlaybackService) -> APIRouter:
+    router = APIRouter(prefix="/api")
+
+    album_json = make_album_json_fn(conn, media_base_url)
+    track_json = make_track_json_fn(media_base_url)
 
     # --- browsing -----------------------------------------------------
 
     @router.get("/home")
     async def home() -> dict[str, Any]:
+        encore_cutoff = repo.iso_now_minus_days(365)
         return {
             "recently_added": [album_json(r) for r in repo.list_recent_albums(conn, _RECENT_ALBUMS_LIMIT)],
-            # Listening history doesn't exist until Phase 4's `plays` table
-            # is populated; these are intentionally empty, not broken.
-            "recently_played": [],
-            "rediscover": [],
+            "recently_played": albums_with_extra(
+                conn, album_json, repo.recently_played_albums(conn, _RECENT_ALBUMS_LIMIT), "last_played"
+            ),
+            # "Rediscover" and Phase 4's "Encore" are the same idea: albums
+            # you used to listen to but haven't touched in 12+ months.
+            "rediscover": albums_with_extra(
+                conn, album_json, repo.encore_albums(conn, encore_cutoff, _RECENT_ALBUMS_LIMIT), "last_played"
+            ),
         }
 
     @router.get("/search")
@@ -177,14 +218,12 @@ def build_api_router(conn: sqlite3.Connection, media_base_url: str, playback: Pl
         albums = [album_json(r) for r in repo.list_albums_for_year(conn, year)]
         return {"id": ids.year_id(year), "year": year, "albums": albums}
 
-    @router.get("/playlists")
-    async def list_playlists() -> list[dict[str, Any]]:
-        # Empty until Phase 4 adds playlist creation; the endpoint exists now
-        # so the frontend's Playlists screen has something real to call.
-        return [
-            {"id": row["id"], "name": row["name"], "description": row["description"]}
-            for row in repo.list_playlists(conn)
-        ]
+    @router.post("/tracks/{track_id}/rating")
+    async def set_rating(track_id: int, body: RatingRequest) -> dict[str, Any]:
+        if repo.get_track(conn, track_id) is None:
+            raise HTTPException(404, "No such track")
+        repo.set_track_rating(conn, track_id, body.rating)
+        return {"id": track_id, "rating": body.rating}
 
     # --- outputs (renderer selection) -------------------------------------
 
@@ -269,6 +308,15 @@ def build_api_router(conn: sqlite3.Connection, media_base_url: str, playback: Pl
         # keep-awake knows a browser is actively streaming even though
         # Orvchestra has no other visibility into "this device" playback.
         playback.set_browser_playing(body.playing)
+        return {"ok": "true"}
+
+    @router.post("/playback/progress")
+    async def progress(body: ProgressRequest) -> dict[str, str]:
+        # This-device's equivalent of the DLNA poll loop's position updates:
+        # the frontend calls this (throttled) from the <audio> element's
+        # timeupdate so a this-device play gets recorded via the same
+        # 50%-or-4-minutes threshold logic as a WiiM one.
+        playback.report_browser_position(body.position_seconds)
         return {"ok": "true"}
 
     return router

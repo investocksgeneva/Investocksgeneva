@@ -3,13 +3,24 @@ plain Python values and never writes a query itself."""
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import uuid
-from typing import Iterable
+from datetime import datetime, timedelta, timezone
+from typing import Any, Iterable
 
 from orvchestra.models import TrackTags
 
 _NOW = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')"
+
+
+def iso_now_minus_days(days: float) -> str:
+    """An ISO8601 UTC timestamp in the exact `YYYY-MM-DDTHH:MM:SS.mmmZ` shape
+    `_NOW` produces, so Python-computed cutoffs and SQLite-computed
+    timestamps compare correctly as plain strings -- no SQLite date/time
+    functions or timezone handling needed anywhere else in this module."""
+    dt = datetime.now(timezone.utc) - timedelta(days=days)
+    return dt.strftime("%Y-%m-%dT%H:%M:%S.") + f"{dt.microsecond // 1000:03d}Z"
 
 
 # --- roots -------------------------------------------------------------
@@ -390,3 +401,196 @@ def library_stats(conn: sqlite3.Connection) -> dict:
         "total_duration_seconds": total_duration,
         "total_size_bytes": total_size,
     }
+
+
+# --- listening history (plays) ---------------------------------------------
+#
+# A play is recorded once by PlaybackService (see playback/service.py) when
+# a track has been listened to past the 50%-or-4-minutes threshold; this
+# module only stores what it's given and answers queries over it.
+
+def record_play(conn: sqlite3.Connection, track_id: int, started_at: str, seconds_played: float, device: str) -> None:
+    conn.execute(
+        "INSERT INTO plays (track_id, user_id, started_at, seconds_played, device) VALUES (?, NULL, ?, ?, ?)",
+        (track_id, started_at, seconds_played, device),
+    )
+    conn.commit()
+
+
+# Two different "who does this belong to" rules, used for different stats:
+# album grouping treats a compilation as "Various Artists" (matching
+# v_albums, so a compilation is one browsable album, not one per
+# contributor); artist-attribution stats care about who you actually
+# listened to, so a compilation track counts for its own (real) artist.
+_ALBUM_GROUP_ARTIST_EXPR = (
+    "CASE WHEN tracks.compilation THEN 'Various Artists' "
+    "ELSE COALESCE(NULLIF(tracks.album_artist, ''), NULLIF(tracks.artist, ''), 'Unknown Artist') END"
+)
+_ALBUM_GROUP_ALBUM_EXPR = "COALESCE(NULLIF(tracks.album, ''), 'Unknown Album')"
+_ARTIST_ATTRIBUTION_EXPR = "COALESCE(NULLIF(tracks.artist, ''), NULLIF(tracks.album_artist, ''), 'Unknown Artist')"
+
+
+def _period_where(since_iso: str | None, until_iso: str | None, params: list[Any]) -> str:
+    clauses = []
+    if since_iso is not None:
+        clauses.append("plays.started_at >= ?")
+        params.append(since_iso)
+    if until_iso is not None:
+        clauses.append("plays.started_at < ?")
+        params.append(until_iso)
+    return f" WHERE {' AND '.join(clauses)}" if clauses else ""
+
+
+def top_tracks(
+    conn: sqlite3.Connection, since_iso: str | None, until_iso: str | None = None, limit: int = 20
+) -> list[sqlite3.Row]:
+    params: list[Any] = []
+    query = (
+        "SELECT tracks.*, COUNT(*) AS play_count, SUM(plays.seconds_played) AS total_seconds_played "
+        "FROM plays JOIN tracks ON tracks.id = plays.track_id"
+    )
+    query += _period_where(since_iso, until_iso, params)
+    query += " GROUP BY tracks.id ORDER BY play_count DESC, total_seconds_played DESC LIMIT ?"
+    params.append(limit)
+    return conn.execute(query, params).fetchall()
+
+
+def top_artists(
+    conn: sqlite3.Connection, since_iso: str | None, until_iso: str | None = None, limit: int = 20
+) -> list[sqlite3.Row]:
+    params: list[Any] = []
+    query = f"SELECT {_ARTIST_ATTRIBUTION_EXPR} AS artist, COUNT(*) AS play_count FROM plays JOIN tracks ON tracks.id = plays.track_id"
+    query += _period_where(since_iso, until_iso, params)
+    query += " GROUP BY artist ORDER BY play_count DESC LIMIT ?"
+    params.append(limit)
+    return conn.execute(query, params).fetchall()
+
+
+def top_albums(
+    conn: sqlite3.Connection, since_iso: str | None, until_iso: str | None = None, limit: int = 20
+) -> list[sqlite3.Row]:
+    params: list[Any] = []
+    query = (
+        f"SELECT {_ALBUM_GROUP_ARTIST_EXPR} AS album_artist, {_ALBUM_GROUP_ALBUM_EXPR} AS album, tracks.year AS year, "
+        "COUNT(*) AS play_count FROM plays JOIN tracks ON tracks.id = plays.track_id"
+    )
+    query += _period_where(since_iso, until_iso, params)
+    query += " GROUP BY album_artist, album, year ORDER BY play_count DESC LIMIT ?"
+    params.append(limit)
+    return conn.execute(query, params).fetchall()
+
+
+def listening_summary(conn: sqlite3.Connection, since_iso: str | None, until_iso: str | None = None) -> dict[str, Any]:
+    params: list[Any] = []
+    query = "SELECT COUNT(*) AS play_count, COALESCE(SUM(seconds_played), 0) AS total_seconds FROM plays"
+    query += _period_where(since_iso, until_iso, params)
+    row = conn.execute(query, params).fetchone()
+    return {"play_count": row["play_count"], "total_seconds": row["total_seconds"]}
+
+
+def format_mix_played(conn: sqlite3.Connection, since_iso: str | None, until_iso: str | None = None) -> list[sqlite3.Row]:
+    params: list[Any] = []
+    query = (
+        "SELECT COALESCE(tracks.codec, 'unknown') AS codec, COUNT(*) AS play_count "
+        "FROM plays JOIN tracks ON tracks.id = plays.track_id"
+    )
+    query += _period_where(since_iso, until_iso, params)
+    query += " GROUP BY codec ORDER BY play_count DESC"
+    return conn.execute(query, params).fetchall()
+
+
+def recently_played_albums(conn: sqlite3.Connection, limit: int = 40) -> list[sqlite3.Row]:
+    query = (
+        f"SELECT {_ALBUM_GROUP_ARTIST_EXPR} AS album_artist, {_ALBUM_GROUP_ALBUM_EXPR} AS album, tracks.year AS year, "
+        "MAX(plays.started_at) AS last_played FROM plays JOIN tracks ON tracks.id = plays.track_id "
+        "GROUP BY album_artist, album, year ORDER BY last_played DESC LIMIT ?"
+    )
+    return conn.execute(query, (limit,)).fetchall()
+
+
+def encore_albums(conn: sqlite3.Connection, cutoff_iso: str, limit: int = 40) -> list[sqlite3.Row]:
+    """Albums that have been played before but not in the last `cutoff_iso`
+    stretch -- "you used to listen to this" rather than "you never have"."""
+    query = (
+        f"SELECT {_ALBUM_GROUP_ARTIST_EXPR} AS album_artist, {_ALBUM_GROUP_ALBUM_EXPR} AS album, tracks.year AS year, "
+        "MAX(plays.started_at) AS last_played FROM plays JOIN tracks ON tracks.id = plays.track_id "
+        "GROUP BY album_artist, album, year HAVING last_played < ? ORDER BY last_played ASC LIMIT ?"
+    )
+    return conn.execute(query, (cutoff_iso, limit)).fetchall()
+
+
+# --- ratings -----------------------------------------------------------
+
+def set_track_rating(conn: sqlite3.Connection, track_id: int, rating: int | None) -> None:
+    conn.execute("UPDATE tracks SET rating = ? WHERE id = ?", (rating, track_id))
+    conn.commit()
+
+
+# --- smart playlists -----------------------------------------------------
+#
+# A smart playlist is a `playlists` row with is_smart=1 and its rule set
+# serialized as JSON; there's no separate rules table since the rule shape
+# is small, fully owned by this app (never hand-edited), and evaluated
+# fresh on every view rather than stored as a materialized track list.
+
+def create_smart_playlist(conn: sqlite3.Connection, name: str, description: str | None, rules: dict[str, Any]) -> int:
+    cur = conn.execute(
+        f"INSERT INTO playlists (name, description, is_smart, rules_json, created_at, updated_at) "
+        f"VALUES (?, ?, 1, ?, {_NOW}, {_NOW})",
+        (name, description, json.dumps(rules)),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def delete_playlist(conn: sqlite3.Connection, playlist_id: int) -> bool:
+    cur = conn.execute("DELETE FROM playlists WHERE id = ?", (playlist_id,))
+    conn.commit()
+    return cur.rowcount > 0
+
+
+def get_playlist(conn: sqlite3.Connection, playlist_id: int) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM playlists WHERE id = ?", (playlist_id,)).fetchone()
+
+
+def evaluate_smart_playlist(conn: sqlite3.Connection, rules: dict[str, Any]) -> list[sqlite3.Row]:
+    clauses = ["tracks.online = 1"]
+    params: list[Any] = []
+
+    if rules.get("genre"):
+        clauses.append("tracks.genre = ?")
+        params.append(rules["genre"])
+    if rules.get("year_min") is not None:
+        clauses.append("tracks.year >= ?")
+        params.append(rules["year_min"])
+    if rules.get("year_max") is not None:
+        clauses.append("tracks.year <= ?")
+        params.append(rules["year_max"])
+    if rules.get("min_rating") is not None:
+        clauses.append("tracks.rating >= ?")
+        params.append(rules["min_rating"])
+    if rules.get("min_play_count") is not None:
+        clauses.append("(SELECT COUNT(*) FROM plays WHERE plays.track_id = tracks.id) >= ?")
+        params.append(rules["min_play_count"])
+    if rules.get("last_played_before_days") is not None:
+        clauses.append(
+            "COALESCE((SELECT MAX(started_at) FROM plays WHERE plays.track_id = tracks.id), '') < ?"
+        )
+        params.append(iso_now_minus_days(rules["last_played_before_days"]))
+    if rules.get("last_played_after_days") is not None:
+        clauses.append(
+            "(SELECT MAX(started_at) FROM plays WHERE plays.track_id = tracks.id) >= ?"
+        )
+        params.append(iso_now_minus_days(rules["last_played_after_days"]))
+
+    order_by = {
+        "title": "tracks.title COLLATE NOCASE",
+        "artist": "tracks.artist COLLATE NOCASE, tracks.album COLLATE NOCASE",
+        "recently_added": "tracks.added_at DESC",
+        "random": "RANDOM()",
+    }.get(rules.get("sort", "title"), "tracks.title COLLATE NOCASE")
+
+    limit = max(1, min(int(rules.get("limit", 200)), 1000))
+    query = f"SELECT tracks.* FROM tracks WHERE {' AND '.join(clauses)} ORDER BY {order_by} LIMIT ?"
+    params.append(limit)
+    return conn.execute(query, params).fetchall()
