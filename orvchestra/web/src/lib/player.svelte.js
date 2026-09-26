@@ -5,10 +5,20 @@
 //    driving playback (AVTransport/RenderingControl), so state comes from
 //    polling GET /api/now-playing.
 //  - "this device": nothing on the backend plays anything -- the browser's
-//    own <audio> element does, pointed straight at /track/{id}.{ext}. The
-//    backend still owns the *queue* (so Queue/Now Playing look the same
-//    regardless of output), but position/duration/play-state for this mode
-//    come from the audio element itself, not from polling.
+//    own <audio> element does, pointed straight at /track/{id}.{ext} for a
+//    local file or a radio station's stream URL. The backend still owns the
+//    *queue* (so Queue/Now Playing look the same regardless of output), but
+//    position/duration/play-state for this mode come from the audio element
+//    itself, not from polling.
+//
+// This-device playback actually uses *two* separate <audio> elements, not
+// one: the regular one gets wired into a Web Audio graph (equalizer.svelte.js)
+// for the EQ/visualizer, and once an element has ever been connected to Web
+// Audio, any cross-origin content it plays afterward without CORS headers is
+// permanently silenced by the browser (a security measure, not a bug) --
+// almost no internet radio station sends those headers. A second, plain
+// element that's never touched by Web Audio sidesteps that entirely, at the
+// cost of the EQ/visualizer simply not applying to radio.
 //
 // Every control function below calls the matching API endpoint and applies
 // whatever `now_playing`-shaped result comes back through `applyNowPlaying`,
@@ -35,12 +45,15 @@ export const player = $state({
 });
 
 let audioEl = null;
+let radioAudioEl = null;
 let pollTimer = null;
 let lastReportedProgressAt = 0;
-// hls.js rewrites audioEl.src to an internal blob: URL once attached, so the
-// "is this already loaded" check has to compare against the URL we asked
-// for, not whatever the element's own .src happens to read afterward.
-let currentLoadedUrl = null;
+// hls.js rewrites an element's .src to an internal blob: URL once attached,
+// so the "is this already loaded" check has to compare against the URL we
+// asked for, not whatever the element's own .src happens to read afterward.
+// Tracked separately per element since either can have something loaded.
+let localLoadedUrl = null;
+let radioLoadedUrl = null;
 
 // Throttled so a this-device play gets recorded via the same threshold
 // logic a WiiM play does (see PlaybackService.report_browser_position)
@@ -48,40 +61,71 @@ let currentLoadedUrl = null;
 // several times a second).
 const PROGRESS_REPORT_INTERVAL_MS = 5000;
 
-export function bindAudioElement(el) {
-  audioEl = el;
-  audioEl.addEventListener("play", () => {
-    if (player.selectedOutput !== THIS_DEVICE) return;
+function activeEl() {
+  return player.currentTrack?.is_radio ? radioAudioEl : audioEl;
+}
+
+function wireTransportEvents(el, isRadio) {
+  // Both elements sit bound at all times, but only one is ever "the" active
+  // source at once -- a stray event from the currently-inactive one (e.g.
+  // leftover buffering after a switch) must not clobber shared state.
+  const isActive = () => player.selectedOutput === THIS_DEVICE && Boolean(player.currentTrack?.is_radio) === isRadio;
+
+  el.addEventListener("play", () => {
+    if (!isActive()) return;
     player.isPlaying = true;
     api.browserState(true).catch(() => {});
   });
-  audioEl.addEventListener("pause", () => {
-    if (player.selectedOutput !== THIS_DEVICE) return;
+  el.addEventListener("pause", () => {
+    if (!isActive()) return;
     player.isPlaying = false;
     api.browserState(false).catch(() => {});
   });
-  audioEl.addEventListener("timeupdate", () => {
-    if (player.selectedOutput !== THIS_DEVICE) return;
-    player.positionSeconds = audioEl.currentTime;
+
+  if (isRadio) {
+    // A live stream ending/erroring isn't "track finished" in any meaningful
+    // sense -- there's no queue to advance, just note playback stopped.
+    el.addEventListener("ended", () => {
+      if (!isActive()) return;
+      player.isPlaying = false;
+      api.browserState(false).catch(() => {});
+    });
+    return;
+  }
+
+  el.addEventListener("timeupdate", () => {
+    if (!isActive()) return;
+    player.positionSeconds = el.currentTime;
     const now = Date.now();
     if (now - lastReportedProgressAt >= PROGRESS_REPORT_INTERVAL_MS) {
       lastReportedProgressAt = now;
-      api.reportProgress(audioEl.currentTime).catch(() => {});
+      api.reportProgress(el.currentTime).catch(() => {});
     }
   });
-  audioEl.addEventListener("durationchange", () => {
-    if (player.selectedOutput === THIS_DEVICE && Number.isFinite(audioEl.duration)) {
-      player.durationSeconds = audioEl.duration;
+  el.addEventListener("durationchange", () => {
+    if (isActive() && Number.isFinite(el.duration)) {
+      player.durationSeconds = el.duration;
     }
   });
-  audioEl.addEventListener("ended", async () => {
-    // The track finished, which is itself worth reporting as final
-    // progress (a short track's periodic 5s reports might otherwise never
-    // land squarely on/past its own threshold).
-    await api.reportProgress(audioEl.duration || audioEl.currentTime).catch(() => {});
+  el.addEventListener("ended", async () => {
+    // The track finished, which is itself worth reporting as final progress
+    // (a short track's periodic 5s reports might otherwise never land
+    // squarely on/past its own threshold).
+    if (!isActive()) return;
+    await api.reportProgress(el.duration || el.currentTime).catch(() => {});
     await api.browserState(false).catch(() => {});
     await next();
   });
+}
+
+export function bindAudioElement(el) {
+  audioEl = el;
+  wireTransportEvents(el, false);
+}
+
+export function bindRadioAudioElement(el) {
+  radioAudioEl = el;
+  wireTransportEvents(el, true);
 }
 
 function stopPolling() {
@@ -103,27 +147,55 @@ function startPolling() {
   }, RENDERER_POLL_INTERVAL_MS);
 }
 
+function stopBoth() {
+  if (audioEl) {
+    localLoadedUrl = null;
+    stopStream(audioEl);
+  }
+  if (radioAudioEl) {
+    radioLoadedUrl = null;
+    stopStream(radioAudioEl);
+  }
+}
+
 async function applyNowPlaying(np) {
   player.queuePosition = np.queue_position ?? player.queuePosition;
   player.currentTrack = np.track ?? null;
 
   if (player.selectedOutput === THIS_DEVICE) {
-    if (audioEl && np.track) {
+    if (!np.track) {
+      stopBoth();
+      return;
+    }
+
+    const isRadio = Boolean(np.track.is_radio);
+    // Only one of the two elements should ever be audible at once -- silence
+    // whichever one isn't relevant to what's playing now.
+    if (isRadio && audioEl && localLoadedUrl) {
+      localLoadedUrl = null;
+      stopStream(audioEl);
+    }
+    if (!isRadio && radioAudioEl && radioLoadedUrl) {
+      radioLoadedUrl = null;
+      stopStream(radioAudioEl);
+    }
+
+    const el = isRadio ? radioAudioEl : audioEl;
+    if (el) {
       const url = trackStreamUrl(np.track);
-      if (currentLoadedUrl !== url) {
-        currentLoadedUrl = url;
-        await loadStream(audioEl, url);
+      const alreadyLoaded = (isRadio ? radioLoadedUrl : localLoadedUrl) === url;
+      if (!alreadyLoaded) {
+        if (isRadio) radioLoadedUrl = url;
+        else localLoadedUrl = url;
+        await loadStream(el, url);
         lastReportedProgressAt = 0; // report promptly on the new track, don't wait out the old throttle window
         try {
-          await audioEl.play();
+          await el.play();
         } catch {
           // Autoplay may be blocked until the user interacts with the page;
           // they can just press play themselves.
         }
       }
-    } else if (audioEl) {
-      currentLoadedUrl = null;
-      stopStream(audioEl);
     }
     return;
   }
@@ -164,9 +236,8 @@ export async function selectOutput(id) {
   stopPolling();
   if (id !== THIS_DEVICE) {
     startPolling();
-  } else if (audioEl) {
-    currentLoadedUrl = null;
-    stopStream(audioEl);
+  } else {
+    stopBoth();
   }
 }
 
@@ -202,9 +273,10 @@ export async function playRadioStation(station) {
 
 export async function togglePlayPause() {
   if (player.selectedOutput === THIS_DEVICE) {
-    if (!audioEl) return;
-    if (audioEl.paused) await audioEl.play();
-    else audioEl.pause();
+    const el = activeEl();
+    if (!el) return;
+    if (el.paused) await el.play();
+    else el.pause();
     return;
   }
   const np = player.isPlaying ? await api.pause() : await api.resume();
@@ -221,7 +293,8 @@ export async function previous() {
 
 export async function seek(seconds) {
   if (player.selectedOutput === THIS_DEVICE) {
-    if (audioEl) audioEl.currentTime = seconds;
+    const el = activeEl();
+    if (el) el.currentTime = seconds;
     player.positionSeconds = seconds;
     return;
   }
@@ -230,7 +303,8 @@ export async function seek(seconds) {
 
 export async function setVolume(level) {
   if (player.selectedOutput === THIS_DEVICE) {
-    if (audioEl) audioEl.volume = level;
+    const el = activeEl();
+    if (el) el.volume = level;
     player.volume = level;
     return;
   }

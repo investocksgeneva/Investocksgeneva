@@ -1,7 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { route, navigate } from "./lib/router.svelte.js";
-  import { player, initPlayer, bindAudioElement } from "./lib/player.svelte.js";
+  import { player, initPlayer, bindAudioElement, bindRadioAudioElement } from "./lib/player.svelte.js";
   import { ensureGraph, resumeContext } from "./lib/equalizer.svelte.js";
   import MiniPlayer from "./lib/MiniPlayer.svelte";
   import Home from "./routes/Home.svelte";
@@ -19,9 +19,18 @@
   import Radio from "./routes/Radio.svelte";
 
   let audioEl;
+  let radioAudioEl;
 
   onMount(() => {
     bindAudioElement(audioEl);
+    // Deliberately never wired into the Web Audio graph (no ensureGraph
+    // here) -- see player.svelte.js's module docstring for why: once an
+    // element has ever been connected to Web Audio, cross-origin content
+    // without CORS headers (almost every internet radio station) plays back
+    // completely silent afterward. Radio gets its own untouched element so
+    // it can never be tainted that way, at the cost of the EQ/visualizer
+    // simply not applying to it.
+    bindRadioAudioElement(radioAudioEl);
     initPlayer();
     // Built on first play, not here: an AudioContext created before a user
     // gesture stays suspended on iOS Safari, and connecting the element to
@@ -69,6 +78,7 @@
 </script>
 
 <audio bind:this={audioEl} preload="metadata"></audio>
+<audio bind:this={radioAudioEl}></audio>
 
 <main class="screen">
   <screen.component {...screen.props} />
