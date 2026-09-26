@@ -1,0 +1,42 @@
+[project]
+name = "orvchestra"
+version = "0.1.0"
+description = "A private, streaming-style player for a local FLAC/lossless music library"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+    "mutagen>=1.47",
+    "pillow>=10.4",
+    "watchdog>=4.0",
+    "click>=8.1",
+]
+
+[project.scripts]
+orvchestra = "orvchestra.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    # Test-fixture generation only (never imported by orvchestra itself):
+    # soundfile/numpy encode real silent FLAC/WAV audio, lameenc encodes real MP3,
+    # so scanner tests run against genuine codec bitstreams instead of stubs.
+    "soundfile>=0.12",
+    "numpy>=1.26",
+    "lameenc>=1.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/orvchestra"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

@@ -1,0 +1,7 @@
+# App data must never live in the repo; this is a belt-and-braces guard in
+# case ORVCHESTRA_DATA_DIR isn't set and something writes here by accident.
+*.db
+*.db-wal
+*.db-shm
+.coverage
+htmlcov/
