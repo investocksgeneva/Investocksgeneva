@@ -186,6 +186,33 @@ SELECT
 FROM tracks
 WHERE compilation = 0
 GROUP BY 1;
+
+-- Picks one representative art_hash per album: whichever track sorts first
+-- by (disc, track) among those that actually have art, per album. This is
+-- the piece Phase 1's README explicitly deferred ("art_hash isn't in the
+-- Phase-1 view") until something needed to actually serve album art.
+CREATE VIEW IF NOT EXISTS v_album_art AS
+SELECT album_artist, album, year, art_hash
+FROM (
+    SELECT
+        CASE WHEN compilation THEN 'Various Artists'
+             ELSE COALESCE(NULLIF(album_artist, ''), NULLIF(artist, ''), 'Unknown Artist')
+        END AS album_artist,
+        COALESCE(NULLIF(album, ''), 'Unknown Album') AS album,
+        year,
+        art_hash,
+        ROW_NUMBER() OVER (
+            PARTITION BY
+                CASE WHEN compilation THEN 'Various Artists'
+                     ELSE COALESCE(NULLIF(album_artist, ''), NULLIF(artist, ''), 'Unknown Artist')
+                END,
+                COALESCE(NULLIF(album, ''), 'Unknown Album'),
+                year
+            ORDER BY (art_hash IS NULL), COALESCE(disc_number, 1), COALESCE(track_number, 999999)
+        ) AS rn
+    FROM tracks
+)
+WHERE rn = 1;
 """
 
 

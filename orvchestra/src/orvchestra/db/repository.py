@@ -4,6 +4,7 @@ plain Python values and never writes a query itself."""
 from __future__ import annotations
 
 import sqlite3
+import uuid
 from typing import Iterable
 
 from orvchestra.models import TrackTags
@@ -163,6 +164,149 @@ def mark_tracks_offline(conn: sqlite3.Connection, track_ids: Iterable[int]) -> N
     if not ids:
         return
     conn.executemany("UPDATE tracks SET online = 0 WHERE id = ?", [(i,) for i in ids])
+
+
+# --- system update id (DLNA ContentDirectory change notification) -------
+
+def get_system_update_id(conn: sqlite3.Connection) -> int:
+    row = conn.execute("SELECT value FROM schema_meta WHERE key = 'system_update_id'").fetchone()
+    return int(row["value"]) if row else 0
+
+
+def bump_system_update_id(conn: sqlite3.Connection) -> int:
+    new_id = get_system_update_id(conn) + 1
+    conn.execute(
+        "INSERT INTO schema_meta(key, value) VALUES ('system_update_id', ?) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        (str(new_id),),
+    )
+    return new_id
+
+
+def get_or_create_device_udn(conn: sqlite3.Connection) -> str:
+    """A UDN that stays stable across restarts, so DLNA control points and the
+    WiiM app don't see a "new" device (and re-favorite it) every time
+    Orvchestra starts."""
+    row = conn.execute("SELECT value FROM schema_meta WHERE key = 'device_udn'").fetchone()
+    if row:
+        return row["value"]
+    udn = f"uuid:{uuid.uuid4()}"
+    conn.execute("INSERT INTO schema_meta(key, value) VALUES ('device_udn', ?)", (udn,))
+    conn.commit()
+    return udn
+
+
+# --- browsing (DLNA ContentDirectory, and later the web app) -------------
+
+def list_artists(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    return conn.execute("SELECT * FROM v_artists ORDER BY artist COLLATE NOCASE").fetchall()
+
+
+def get_artist(conn: sqlite3.Connection, name: str) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM v_artists WHERE artist = ?", (name,)).fetchone()
+
+
+def list_albums(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    return conn.execute("SELECT * FROM v_albums ORDER BY album COLLATE NOCASE, year").fetchall()
+
+
+def list_albums_by_artist(conn: sqlite3.Connection, artist: str) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM v_albums WHERE album_artist = ? ORDER BY year, album COLLATE NOCASE", (artist,)
+    ).fetchall()
+
+
+def get_album(conn: sqlite3.Connection, album_artist: str, album: str, year: int | None) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT * FROM v_albums WHERE album_artist = ? AND album = ? AND year IS ?", (album_artist, album, year)
+    ).fetchone()
+
+
+def list_albums_for_year(conn: sqlite3.Connection, year: int) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM v_albums WHERE year = ? ORDER BY album_artist COLLATE NOCASE, album COLLATE NOCASE", (year,)
+    ).fetchall()
+
+
+def list_recent_albums(conn: sqlite3.Connection, limit: int = 100) -> list[sqlite3.Row]:
+    return conn.execute("SELECT * FROM v_albums ORDER BY added_at DESC LIMIT ?", (limit,)).fetchall()
+
+
+def list_years(conn: sqlite3.Connection) -> list[int]:
+    rows = conn.execute(
+        "SELECT DISTINCT year FROM tracks WHERE year IS NOT NULL ORDER BY year DESC"
+    ).fetchall()
+    return [row["year"] for row in rows]
+
+
+def list_genres(conn: sqlite3.Connection) -> list[str]:
+    # One row per distinct raw genre *string* as tagged (not split on "; "
+    # for multi-genre tracks) -- see README for why that's a Phase 2
+    # simplification rather than a real normalized genre list.
+    rows = conn.execute(
+        "SELECT DISTINCT genre FROM tracks WHERE genre IS NOT NULL AND genre != '' ORDER BY genre COLLATE NOCASE"
+    ).fetchall()
+    return [row["genre"] for row in rows]
+
+
+def list_tracks_for_album(
+    conn: sqlite3.Connection, album_artist: str, album: str, year: int | None
+) -> list[sqlite3.Row]:
+    compilation_artist = album_artist == "Various Artists"
+    if compilation_artist:
+        # A compilation's per-track album_artist tag is whatever the
+        # original tagger wrote (often the track's own artist), not
+        # "Various Artists" -- v_albums only renames it for display. Match
+        # on the album/year/compilation flag instead of album_artist here.
+        query = (
+            "SELECT * FROM tracks WHERE compilation = 1 "
+            "AND COALESCE(NULLIF(album, ''), 'Unknown Album') = ? AND year IS ? "
+            "ORDER BY COALESCE(disc_number, 1), COALESCE(track_number, 999999), rel_path"
+        )
+        return conn.execute(query, (album, year)).fetchall()
+
+    query = (
+        "SELECT * FROM tracks WHERE compilation = 0 "
+        "AND COALESCE(NULLIF(album_artist, ''), NULLIF(artist, ''), 'Unknown Artist') = ? "
+        "AND COALESCE(NULLIF(album, ''), 'Unknown Album') = ? AND year IS ? "
+        "ORDER BY COALESCE(disc_number, 1), COALESCE(track_number, 999999), rel_path"
+    )
+    return conn.execute(query, (album_artist, album, year)).fetchall()
+
+
+def list_tracks_for_genre(conn: sqlite3.Connection, genre: str) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM tracks WHERE genre = ? ORDER BY artist COLLATE NOCASE, album COLLATE NOCASE, "
+        "COALESCE(disc_number, 1), COALESCE(track_number, 999999), rel_path",
+        (genre,),
+    ).fetchall()
+
+
+def get_track(conn: sqlite3.Connection, track_id: int) -> sqlite3.Row | None:
+    return conn.execute(
+        """
+        SELECT tracks.*, roots.path AS root_path, roots.online AS root_online
+        FROM tracks JOIN roots ON roots.id = tracks.root_id
+        WHERE tracks.id = ?
+        """,
+        (track_id,),
+    ).fetchone()
+
+
+def get_album_art_hash(conn: sqlite3.Connection, album_artist: str, album: str, year: int | None) -> str | None:
+    row = conn.execute(
+        "SELECT art_hash FROM v_album_art WHERE album_artist = ? AND album = ? AND year IS ?",
+        (album_artist, album, year),
+    ).fetchone()
+    return row["art_hash"] if row else None
+
+
+def list_playlists(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    return conn.execute("SELECT * FROM playlists ORDER BY name COLLATE NOCASE").fetchall()
+
+
+def get_artwork(conn: sqlite3.Connection, art_hash: str) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM artwork WHERE hash = ?", (art_hash,)).fetchone()
 
 
 def library_stats(conn: sqlite3.Connection) -> dict:

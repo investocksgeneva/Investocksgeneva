@@ -10,6 +10,10 @@ dependencies = [
     "pillow>=10.4",
     "watchdog>=4.0",
     "click>=8.1",
+    "fastapi>=0.141.1",
+    "uvicorn>=0.54.0",
+    "async-upnp-client>=0.48.2",
+    "python-didl-lite>=1.5.1",
 ]
 
 [project.scripts]
@@ -25,6 +29,9 @@ dev = [
     "soundfile>=0.12",
     "numpy>=1.26",
     "lameenc>=1.7",
+    # Required by Starlette's TestClient, and used directly for the one
+    # real-socket DLNA/SOAP integration test.
+    "httpx2>=2.13.1",
 ]
 
 [build-system]

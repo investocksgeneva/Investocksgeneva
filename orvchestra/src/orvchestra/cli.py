@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import asyncio
 import sys
 from pathlib import Path
 
 import click
+import uvicorn
+from async_upnp_client.utils import get_local_ip
 
 from orvchestra import paths
 from orvchestra.db.connection import connect
 from orvchestra.db.repository import add_root, get_root_by_path, library_stats, list_roots, remove_root
+from orvchestra.dlna.server import DlnaMediaServer
+from orvchestra.media.app import create_media_app
 from orvchestra.scanner.scan import scan_all_roots
 from orvchestra.scanner.volume import get_volume_uuid
 
@@ -117,6 +122,40 @@ def stats() -> None:
     click.echo("By codec:")
     for codec, count in s["by_codec"].items():
         click.echo(f"  {codec}: {count}")
+
+
+@main.command()
+@click.option("--dlna-port", default=8200, show_default=True, help="Port for DLNA device description/SOAP control.")
+@click.option("--media-port", default=8347, show_default=True, help="Port for media/artwork HTTP streaming.")
+@click.option("--host", default=None, help="LAN address to advertise; auto-detected if omitted.")
+def serve(dlna_port: int, media_port: int, host: str | None) -> None:
+    """Run the DLNA MediaServer and media endpoints. Ctrl-C to stop."""
+    asyncio.run(_serve(dlna_port, media_port, host))
+
+
+async def _serve(dlna_port: int, media_port: int, host: str | None) -> None:
+    conn = connect(paths.db_path())
+    local_ip = host or get_local_ip()
+    media_base_url = f"http://{local_ip}:{media_port}"
+
+    media_app = create_media_app(conn)
+    uvicorn_server = uvicorn.Server(
+        uvicorn.Config(media_app, host="0.0.0.0", port=media_port, log_level="warning")
+    )
+
+    dlna_server = DlnaMediaServer(conn, media_base_url, dlna_port, host=local_ip)
+    await dlna_server.start()
+
+    click.echo("Orvchestra is serving:")
+    click.echo(f"  DLNA device description: http://{local_ip}:{dlna_port}/upnp/device.xml")
+    click.echo(f"  Media/artwork endpoint:  {media_base_url}")
+    click.echo("Look for \"Orvchestra (MacBook)\" in WiiM Home's music library sources.")
+    click.echo("Press Ctrl-C to stop.")
+
+    try:
+        await uvicorn_server.serve()
+    finally:
+        await dlna_server.stop()
 
 
 if __name__ == "__main__":

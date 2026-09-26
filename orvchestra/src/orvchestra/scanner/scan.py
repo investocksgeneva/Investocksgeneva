@@ -96,6 +96,11 @@ def scan_root(conn: sqlite3.Connection, root_row: sqlite3.Row, artwork_dir: Path
         repo.mark_tracks_offline(conn, missing_ids)
         stats.marked_offline = len(missing_ids)
 
+    if stats.added or stats.updated or stats.marked_offline or stats.marked_online:
+        # Lets a DLNA control point notice its cached ContentDirectory
+        # listings are stale via the SystemUpdateID state variable.
+        repo.bump_system_update_id(conn)
+
     conn.commit()
     stats.duration_seconds = time.monotonic() - started
     return stats
