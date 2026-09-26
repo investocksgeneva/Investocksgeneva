@@ -2,6 +2,10 @@
 // Audio API. It only ever touches the browser's own <audio> element -- a
 // DLNA renderer (the WiiM) receives the raw file straight from the engine,
 // bypassing the browser entirely, so this has no effect on that output.
+//
+// This module also owns the shared AnalyserNode that lib/Visualizer.svelte
+// reads from, since both need the same one-time-only audio graph built on
+// the same <audio> element.
 
 const STORAGE_KEY = "orvchestra.eq.v1";
 
@@ -45,6 +49,7 @@ export const eq = $state({
 
 let audioCtx = null;
 let filters = [];
+let analyser = null;
 
 function persist() {
   try {
@@ -83,6 +88,17 @@ export function ensureGraph(audioEl) {
   sourceNode.connect(filters[0]);
   for (let i = 0; i < filters.length - 1; i++) filters[i].connect(filters[i + 1]);
   filters[filters.length - 1].connect(audioCtx.destination);
+
+  // A passive tap for the visualizer -- it doesn't need its own connection
+  // onward, so adding it here can't change anything about what's audible.
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 256;
+  analyser.smoothingTimeConstant = 0.8;
+  filters[filters.length - 1].connect(analyser);
+}
+
+export function getAnalyser() {
+  return analyser;
 }
 
 export function resumeContext() {

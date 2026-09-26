@@ -13,6 +13,7 @@
   import { api, formatDuration, hiResBadge } from "../lib/api.js";
   import { navigate } from "../lib/router.svelte.js";
   import { resumeContext } from "../lib/equalizer.svelte.js";
+  import Visualizer from "../lib/Visualizer.svelte";
 
   let seeking = $state(false);
   let seekValue = $state(0);
@@ -67,6 +68,8 @@
         </button>
       {/each}
     </div>
+
+    <Visualizer />
 
     <input
       class="seek-bar"
