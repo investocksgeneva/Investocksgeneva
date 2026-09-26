@@ -30,8 +30,16 @@
   {/if}
 
   <div class="section-title">Recently played</div>
-  <p class="empty-state">Listening history arrives in Phase 4.</p>
+  {#if data.recently_played.length}
+    <AlbumGrid albums={data.recently_played} />
+  {:else}
+    <p class="empty-state">Nothing played yet — play something and it'll show up here.</p>
+  {/if}
 
   <div class="section-title">Rediscover</div>
-  <p class="empty-state">Albums you haven't played in a while will show up here once Phase 4 tracks plays.</p>
+  {#if data.rediscover.length}
+    <AlbumGrid albums={data.rediscover} />
+  {:else}
+    <p class="empty-state">Albums you haven't played in 12+ months will show up here.</p>
+  {/if}
 {/if}
