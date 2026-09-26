@@ -87,13 +87,20 @@ def roots_list() -> None:
 
 @main.command()
 @click.option("--root", "only_path", default=None, help="Only scan this root path.")
-def scan(only_path: str | None) -> None:
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Re-read every file's tags even if its size/mtime look unchanged "
+    "(e.g. after upgrading Orvchestra to read a tag it didn't before).",
+)
+def scan(only_path: str | None, force: bool) -> None:
     """Scan configured roots for new, changed, or missing tracks."""
     conn = connect(paths.db_path())
     if only_path is not None:
         only_path = str(Path(only_path).resolve())
 
-    all_stats = scan_all_roots(conn, paths.artwork_dir(), only_path=only_path)
+    all_stats = scan_all_roots(conn, paths.artwork_dir(), only_path=only_path, force=force)
     if not all_stats:
         click.echo("No roots configured. Add one with: orvchestra roots add /path/to/music")
         return

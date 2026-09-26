@@ -25,7 +25,7 @@ from orvchestra.scanner.walker import is_dataless, walk_audio_files
 logger = logging.getLogger("orvchestra.scanner")
 
 
-def scan_root(conn: sqlite3.Connection, root_row: sqlite3.Row, artwork_dir: Path) -> ScanStats:
+def scan_root(conn: sqlite3.Connection, root_row: sqlite3.Row, artwork_dir: Path, force: bool = False) -> ScanStats:
     stats = ScanStats(root_path=root_row["path"])
     started = time.monotonic()
 
@@ -58,8 +58,10 @@ def scan_root(conn: sqlite3.Connection, root_row: sqlite3.Row, artwork_dir: Path
         prior = existing.get(rel_path)
 
         # Fast path: file identical to what's already recorded. Do not open
-        # it, do not touch it, just note it's still here.
-        if prior is not None and prior["size"] == st.st_size and prior["mtime"] == st.st_mtime:
+        # it, do not touch it, just note it's still here. Skipped entirely
+        # under --force, e.g. to pick up a tag Orvchestra didn't read before
+        # (like lyrics) across a library that's already been scanned once.
+        if not force and prior is not None and prior["size"] == st.st_size and prior["mtime"] == st.st_mtime:
             stats.unchanged += 1
             if not prior["online"]:
                 reactivate_ids.append(prior["id"])
@@ -108,8 +110,10 @@ def scan_root(conn: sqlite3.Connection, root_row: sqlite3.Row, artwork_dir: Path
     return stats
 
 
-def scan_all_roots(conn: sqlite3.Connection, artwork_dir: Path, only_path: str | None = None) -> list[ScanStats]:
+def scan_all_roots(
+    conn: sqlite3.Connection, artwork_dir: Path, only_path: str | None = None, force: bool = False
+) -> list[ScanStats]:
     roots = repo.list_roots(conn)
     if only_path is not None:
         roots = [r for r in roots if r["path"] == only_path]
-    return [scan_root(conn, root, artwork_dir) for root in roots]
+    return [scan_root(conn, root, artwork_dir, force=force) for root in roots]
