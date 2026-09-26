@@ -88,7 +88,7 @@ def insert_track(
             musicbrainz_track_id, musicbrainz_album_id, musicbrainz_artist_id,
             replaygain_track_gain, replaygain_track_peak,
             replaygain_album_gain, replaygain_album_peak,
-            has_embedded_art, art_hash, added_at, updated_at
+            has_embedded_art, art_hash, lyrics, added_at, updated_at
         ) VALUES (
             ?, ?, ?, ?, 1,
             ?, ?, ?, ?, ?, ?,
@@ -97,7 +97,7 @@ def insert_track(
             ?, ?, ?,
             ?, ?,
             ?, ?,
-            ?, ?, {_NOW}, {_NOW}
+            ?, ?, ?, {_NOW}, {_NOW}
         )
         """,
         (
@@ -110,7 +110,7 @@ def insert_track(
             tags.musicbrainz_track_id, tags.musicbrainz_album_id, tags.musicbrainz_artist_id,
             tags.replaygain_track_gain, tags.replaygain_track_peak,
             tags.replaygain_album_gain, tags.replaygain_album_peak,
-            int(has_embedded_art), art_hash,
+            int(has_embedded_art), art_hash, tags.lyrics,
         ),
     )
     return cur.lastrowid
@@ -137,7 +137,7 @@ def update_track(
             musicbrainz_track_id = ?, musicbrainz_album_id = ?, musicbrainz_artist_id = ?,
             replaygain_track_gain = ?, replaygain_track_peak = ?,
             replaygain_album_gain = ?, replaygain_album_peak = ?,
-            has_embedded_art = ?, art_hash = ?, updated_at = {_NOW}
+            has_embedded_art = ?, art_hash = ?, lyrics = ?, updated_at = {_NOW}
         WHERE id = ?
         """,
         (
@@ -150,7 +150,7 @@ def update_track(
             tags.musicbrainz_track_id, tags.musicbrainz_album_id, tags.musicbrainz_artist_id,
             tags.replaygain_track_gain, tags.replaygain_track_peak,
             tags.replaygain_album_gain, tags.replaygain_album_peak,
-            int(has_embedded_art), art_hash,
+            int(has_embedded_art), art_hash, tags.lyrics,
             track_id,
         ),
     )

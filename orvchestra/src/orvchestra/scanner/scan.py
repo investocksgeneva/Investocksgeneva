@@ -17,6 +17,7 @@ from pathlib import Path
 from orvchestra.db import repository as repo
 from orvchestra.models import ScanStats
 from orvchestra.scanner.artwork import cache_artwork, get_art_bytes
+from orvchestra.scanner.lyrics import get_lyrics
 from orvchestra.scanner.tags import read_tags
 from orvchestra.scanner.volume import is_root_reachable
 from orvchestra.scanner.walker import is_dataless, walk_audio_files
@@ -79,6 +80,7 @@ def scan_root(conn: sqlite3.Connection, root_row: sqlite3.Row, artwork_dir: Path
         has_embedded_art = picture is not None
         art_bytes = get_art_bytes(abs_path, picture)
         art_hash = cache_artwork(conn, artwork_dir, art_bytes) if art_bytes else None
+        tags.lyrics = get_lyrics(abs_path, tags.lyrics)
 
         if prior is None:
             repo.insert_track(conn, root_row["id"], rel_path, st.st_size, st.st_mtime, tags, art_hash, has_embedded_art)

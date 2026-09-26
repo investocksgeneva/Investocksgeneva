@@ -225,6 +225,13 @@ def build_api_router(conn: sqlite3.Connection, media_base_url: str, playback: Pl
         repo.set_track_rating(conn, track_id, body.rating)
         return {"id": track_id, "rating": body.rating}
 
+    @router.get("/tracks/{track_id}/lyrics")
+    async def get_lyrics(track_id: int) -> dict[str, Any]:
+        row = repo.get_track(conn, track_id)
+        if row is None:
+            raise HTTPException(404, "No such track")
+        return {"id": track_id, "lyrics": row["lyrics"]}
+
     # --- outputs (renderer selection) -------------------------------------
 
     @router.get("/outputs")

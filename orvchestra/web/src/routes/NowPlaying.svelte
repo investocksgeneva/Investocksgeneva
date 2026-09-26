@@ -109,6 +109,7 @@
       />
     </div>
 
+    <button class="link-button" onclick={() => navigate("/lyrics")}>📜 Lyrics</button>
     <button class="link-button" onclick={() => navigate("/equalizer")}>🎚️ Equalizer</button>
   {/if}
 

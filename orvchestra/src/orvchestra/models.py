@@ -36,6 +36,11 @@ class TrackTags:
     musicbrainz_album_id: str | None = None
     musicbrainz_artist_id: str | None = None
 
+    # Whatever text is found -- a plain tag, or the raw contents of an .lrc
+    # sidecar (timestamps and all). The frontend detects and parses "[mm:ss]"
+    # prefixes itself rather than this being tracked as a separate flag.
+    lyrics: str | None = None
+
     replaygain_track_gain: float | None = None
     replaygain_track_peak: float | None = None
     replaygain_album_gain: float | None = None

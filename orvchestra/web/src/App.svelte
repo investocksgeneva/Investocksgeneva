@@ -15,6 +15,7 @@
   import Playlists from "./routes/Playlists.svelte";
   import Stats from "./routes/Stats.svelte";
   import Equalizer from "./routes/Equalizer.svelte";
+  import Lyrics from "./routes/Lyrics.svelte";
 
   let audioEl;
 
@@ -47,6 +48,7 @@
     if (path === "/playlists") return { component: Playlists, props: {} };
     if (path === "/stats") return { component: Stats, props: {} };
     if (path === "/equalizer") return { component: Equalizer, props: {} };
+    if (path === "/lyrics") return { component: Lyrics, props: {} };
     return { component: Home, props: {} };
   });
 

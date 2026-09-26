@@ -238,6 +238,7 @@ def apply_schema(conn: sqlite3.Connection) -> None:
     _ensure_column(conn, "tracks", "rating", "rating INTEGER")
     _ensure_column(conn, "playlists", "is_smart", "is_smart INTEGER NOT NULL DEFAULT 0")
     _ensure_column(conn, "playlists", "rules_json", "rules_json TEXT")
+    _ensure_column(conn, "tracks", "lyrics", "lyrics TEXT")
 
     conn.execute(
         "INSERT INTO schema_meta(key, value) VALUES ('schema_version', ?) "

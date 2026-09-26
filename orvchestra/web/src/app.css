@@ -323,6 +323,25 @@ h3 {
   margin-top: 10px;
 }
 
+.lyrics-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 40px;
+}
+
+.lyrics-line {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+
+.lyrics-line.active {
+  color: var(--accent);
+  font-weight: 700;
+}
+
 .visualizer-wrap {
   width: 100%;
   margin-top: 18px;

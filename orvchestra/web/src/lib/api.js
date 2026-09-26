@@ -48,6 +48,7 @@ export const api = {
   statsWrapped: (year) => request(`/api/stats/wrapped/${encodeURIComponent(year)}`),
 
   setRating: (trackId, rating) => post(`/api/tracks/${encodeURIComponent(trackId)}/rating`, { rating }),
+  lyrics: (trackId) => request(`/api/tracks/${encodeURIComponent(trackId)}/lyrics`),
 
   outputs: () => request("/api/outputs"),
   refreshOutputs: () => post("/api/outputs/refresh"),

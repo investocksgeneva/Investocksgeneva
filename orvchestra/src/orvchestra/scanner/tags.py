@@ -126,6 +126,9 @@ def _read_flac(mfile: FLAC) -> tuple[TrackTags, object | None]:
         replaygain_track_peak=_to_float(_vc_first(tags, "REPLAYGAIN_TRACK_PEAK")),
         replaygain_album_gain=_to_float(_vc_first(tags, "REPLAYGAIN_ALBUM_GAIN")),
         replaygain_album_peak=_to_float(_vc_first(tags, "REPLAYGAIN_ALBUM_PEAK")),
+        # SYNCEDLYRICS is an informal convention some taggers use for raw .lrc
+        # text embedded whole; prefer it over plain unsynced lyrics when both exist.
+        lyrics=_vc_first(tags, "SYNCEDLYRICS", "LYRICS", "UNSYNCEDLYRICS"),
     ), picture
 
 
@@ -138,6 +141,13 @@ def _id3_text(tags, frame_id: str) -> str | None:
     if frame is None or not getattr(frame, "text", None):
         return None
     return str(frame.text[0])
+
+
+def _id3_lyrics(tags) -> str | None:
+    if tags is None:
+        return None
+    uslt_frames = tags.getall("USLT")
+    return str(uslt_frames[0].text) if uslt_frames else None
 
 
 def _id3_txxx(tags) -> dict[str, str]:
@@ -192,6 +202,7 @@ def _read_id3_tags(tags) -> TrackTags:
         replaygain_track_peak=_to_float(txxx.get("REPLAYGAIN_TRACK_PEAK")),
         replaygain_album_gain=_to_float(txxx.get("REPLAYGAIN_ALBUM_GAIN")),
         replaygain_album_peak=_to_float(txxx.get("REPLAYGAIN_ALBUM_PEAK")),
+        lyrics=_id3_lyrics(tags),
     )
 
 
@@ -307,6 +318,7 @@ def _read_mp4(mfile: MP4) -> tuple[TrackTags, object | None]:
         replaygain_track_peak=_to_float(_mp4_freeform(tags, "replaygain_track_peak")),
         replaygain_album_gain=_to_float(_mp4_freeform(tags, "replaygain_album_gain")),
         replaygain_album_peak=_to_float(_mp4_freeform(tags, "replaygain_album_peak")),
+        lyrics=_mp4_text(tags, "\xa9lyr"),
     ), picture
 
 
