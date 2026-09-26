@@ -131,6 +131,20 @@ CREATE TABLE IF NOT EXISTS playlist_items (
     added_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
+-- Internet radio stations the user has saved. Distinct from `tracks`: these
+-- have no file on disk, no duration, nothing to scan -- just a name and a
+-- stream URL, sourced from Radio Browser (radio-browser.info) or typed in
+-- by hand.
+CREATE TABLE IF NOT EXISTS radio_stations (
+    id         TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    stream_url TEXT NOT NULL,
+    favicon    TEXT,
+    tags       TEXT,
+    country    TEXT,
+    added_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
 CREATE TABLE IF NOT EXISTS plays (
     id             INTEGER PRIMARY KEY,
     track_id       INTEGER NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,

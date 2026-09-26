@@ -526,6 +526,44 @@ def set_track_rating(conn: sqlite3.Connection, track_id: int, rating: int | None
     conn.commit()
 
 
+# --- internet radio -------------------------------------------------------
+
+def list_radio_stations(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    return conn.execute("SELECT * FROM radio_stations ORDER BY added_at DESC").fetchall()
+
+
+def get_radio_station(conn: sqlite3.Connection, station_id: str) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM radio_stations WHERE id = ?", (station_id,)).fetchone()
+
+
+def save_radio_station(
+    conn: sqlite3.Connection,
+    station_id: str,
+    name: str,
+    stream_url: str,
+    favicon: str | None,
+    tags: str | None,
+    country: str | None,
+) -> None:
+    conn.execute(
+        """
+        INSERT INTO radio_stations (id, name, stream_url, favicon, tags, country)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            name = excluded.name, stream_url = excluded.stream_url,
+            favicon = excluded.favicon, tags = excluded.tags, country = excluded.country
+        """,
+        (station_id, name, stream_url, favicon, tags, country),
+    )
+    conn.commit()
+
+
+def delete_radio_station(conn: sqlite3.Connection, station_id: str) -> bool:
+    cur = conn.execute("DELETE FROM radio_stations WHERE id = ?", (station_id,))
+    conn.commit()
+    return cur.rowcount > 0
+
+
 # --- smart playlists -----------------------------------------------------
 #
 # A smart playlist is a `playlists` row with is_smart=1 and its rule set

@@ -57,36 +57,44 @@
     {/if}
     <div class="track-title">{player.currentTrack.title}</div>
     <div class="track-artist">{player.currentTrack.artist ?? player.currentTrack.album_artist ?? ""}</div>
-    {#if hiResBadge(player.currentTrack)}
+    {#if player.currentTrack.is_radio}
+      <span class="badge">🔴 LIVE</span>
+    {:else if hiResBadge(player.currentTrack)}
       <span class="badge">{hiResBadge(player.currentTrack)}</span>
     {/if}
 
-    <div class="star-rating">
-      {#each [1, 2, 3, 4, 5] as value (value)}
-        <button aria-label={`Rate ${value} star${value === 1 ? "" : "s"}`} onclick={() => rate(value)}>
-          {(player.currentTrack.rating ?? 0) >= value ? "★" : "☆"}
-        </button>
-      {/each}
-    </div>
+    {#if !player.currentTrack.is_radio}
+      <div class="star-rating">
+        {#each [1, 2, 3, 4, 5] as value (value)}
+          <button aria-label={`Rate ${value} star${value === 1 ? "" : "s"}`} onclick={() => rate(value)}>
+            {(player.currentTrack.rating ?? 0) >= value ? "★" : "☆"}
+          </button>
+        {/each}
+      </div>
+    {/if}
 
     <Visualizer />
 
-    <input
-      class="seek-bar"
-      type="range"
-      min="0"
-      max={knownDuration || 1}
-      value={displayPosition}
-      oninput={onSeekInput}
-      onchange={onSeekCommit}
-    />
-    <div class="time-row">
-      <span>{formatDuration(displayPosition)}</span>
-      <span>{formatDuration(knownDuration)}</span>
-    </div>
+    {#if !player.currentTrack.is_radio}
+      <input
+        class="seek-bar"
+        type="range"
+        min="0"
+        max={knownDuration || 1}
+        value={displayPosition}
+        oninput={onSeekInput}
+        onchange={onSeekCommit}
+      />
+      <div class="time-row">
+        <span>{formatDuration(displayPosition)}</span>
+        <span>{formatDuration(knownDuration)}</span>
+      </div>
+    {/if}
 
     <div class="transport-controls">
-      <button onclick={previous} aria-label="Previous track">⏮</button>
+      {#if !player.currentTrack.is_radio}
+        <button onclick={previous} aria-label="Previous track">⏮</button>
+      {/if}
       <button
         class="play-button"
         onclick={() => { resumeContext(); togglePlayPause(); }}
@@ -94,7 +102,9 @@
       >
         {player.isPlaying ? "⏸" : "▶"}
       </button>
-      <button onclick={next} aria-label="Next track">⏭</button>
+      {#if !player.currentTrack.is_radio}
+        <button onclick={next} aria-label="Next track">⏭</button>
+      {/if}
     </div>
 
     <div class="volume-row">
@@ -109,7 +119,9 @@
       />
     </div>
 
-    <button class="link-button" onclick={() => navigate("/lyrics")}>📜 Lyrics</button>
+    {#if !player.currentTrack.is_radio}
+      <button class="link-button" onclick={() => navigate("/lyrics")}>📜 Lyrics</button>
+    {/if}
     <button class="link-button" onclick={() => navigate("/equalizer")}>🎚️ Equalizer</button>
   {/if}
 

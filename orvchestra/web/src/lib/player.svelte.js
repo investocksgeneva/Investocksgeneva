@@ -179,6 +179,21 @@ export async function playQueue(trackIds, startIndex = 0) {
   }
 }
 
+export async function playRadioStation(station) {
+  player.loading = true;
+  player.error = null;
+  try {
+    const np = await api.radioPlay(station);
+    player.queueTracks = [];
+    await applyNowPlaying(np);
+    if (player.selectedOutput !== THIS_DEVICE) startPolling();
+  } catch (err) {
+    player.error = String(err.message || err);
+  } finally {
+    player.loading = false;
+  }
+}
+
 export async function togglePlayPause() {
   if (player.selectedOutput === THIS_DEVICE) {
     if (!audioEl) return;

@@ -67,11 +67,18 @@ export const api = {
   setVolume: (level) => post("/api/playback/volume", { level }),
   browserState: (playing) => post("/api/playback/browser-state", { playing }),
   reportProgress: (positionSeconds) => post("/api/playback/progress", { position_seconds: positionSeconds }),
+
+  radioSearch: (q) => request(`/api/radio/search?q=${encodeURIComponent(q)}`),
+  radioStations: () => request("/api/radio/stations"),
+  radioSave: (station) => post("/api/radio/stations", station),
+  radioRemove: (id) => del(`/api/radio/stations/${encodeURIComponent(id)}`),
+  radioPlay: (station) => post("/api/radio/play", station),
 };
 
 const STREAM_EXTENSION_BY_CODEC = { FLAC: "flac", MP3: "mp3", WAV: "wav", AAC: "m4a", ALAC: "m4a" };
 
 export function trackStreamUrl(track) {
+  if (track.is_radio) return track.stream_url;
   const ext = STREAM_EXTENSION_BY_CODEC[track.codec] || "bin";
   return `/track/${track.id}.${ext}`;
 }

@@ -39,6 +39,32 @@ _POLL_INTERVAL_SECONDS = 1.0
 _MAX_PLAY_THRESHOLD_SECONDS = 240.0
 
 
+def _radio_track_summary(station: dict[str, Any]) -> dict[str, Any]:
+    """Shaped to match `_track_summary` closely enough that the frontend's
+    Now Playing / mini-player / queue views, which only read fields off
+    this dict, don't need to know radio is a different kind of thing."""
+    return {
+        "id": f"radio:{station['id']}",
+        "title": station["name"],
+        "artist": "Internet radio",
+        "album_artist": None,
+        "album": None,
+        "year": None,
+        "track_number": None,
+        "disc_number": None,
+        "duration_seconds": None,
+        "codec": None,
+        "sample_rate": None,
+        "bit_depth": None,
+        "art_hash": None,
+        "rating": None,
+        "is_radio": True,
+        "stream_url": station["stream_url"],
+        "art_url_large": station.get("favicon") or None,
+        "art_url_small": station.get("favicon") or None,
+    }
+
+
 def _track_summary(row: sqlite3.Row) -> dict[str, Any]:
     return {
         "id": row["id"],
@@ -83,6 +109,7 @@ class PlaybackService:
 
         self.queue: list[int] = []
         self.queue_position: int = 0
+        self._current_radio: dict[str, Any] | None = None
 
         self._pushed_next_track_id: int | None = None
         self._poll_task: asyncio.Task | None = None
@@ -133,6 +160,7 @@ class PlaybackService:
     # --- queue ----------------------------------------------------------
 
     def set_queue(self, track_ids: list[int], start_index: int = 0) -> None:
+        self._current_radio = None
         self.queue = list(track_ids)
         self.queue_position = max(0, min(start_index, len(self.queue) - 1)) if self.queue else 0
         self._pushed_next_track_id = None
@@ -170,6 +198,24 @@ class PlaybackService:
         await renderer.async_play()
         self._pushed_next_track_id = None
         await self._push_next_if_needed()
+        self._ensure_poll_task()
+
+    async def play_radio(self, station: dict[str, Any]) -> None:
+        """A station is not a queue of one -- no gapless next-track push, no
+        play-counting session (there's no meaningful "finished" for a live
+        stream), just point whichever output is active at the raw URL."""
+        self.queue = []
+        self.queue_position = 0
+        self._pushed_next_track_id = None
+        self._play_session = None
+        self._current_radio = station
+
+        renderer = self.active_renderer
+        if renderer is None:
+            return
+        await renderer.async_set_transport_uri(station["stream_url"], station["name"], meta_data="")
+        await renderer.async_wait_for_can_play()
+        await renderer.async_play()
         self._ensure_poll_task()
 
     async def _push_next_if_needed(self) -> None:
@@ -252,14 +298,22 @@ class PlaybackService:
     # --- now playing ------------------------------------------------------
 
     def now_playing(self) -> dict[str, Any]:
-        track_id = self.current_track_id()
-        track_row = repo.get_track(self.conn, track_id) if track_id is not None else None
-        result: dict[str, Any] = {
-            "output": self.active_output,
-            "track": _track_summary(track_row) if track_row is not None else None,
-            "queue_position": self.queue_position,
-            "queue_length": len(self.queue),
-        }
+        if self._current_radio is not None:
+            result: dict[str, Any] = {
+                "output": self.active_output,
+                "track": _radio_track_summary(self._current_radio),
+                "queue_position": 0,
+                "queue_length": 0,
+            }
+        else:
+            track_id = self.current_track_id()
+            track_row = repo.get_track(self.conn, track_id) if track_id is not None else None
+            result = {
+                "output": self.active_output,
+                "track": _track_summary(track_row) if track_row is not None else None,
+                "queue_position": self.queue_position,
+                "queue_length": len(self.queue),
+            }
         renderer = self.active_renderer
         if renderer is not None:
             state = renderer.transport_state

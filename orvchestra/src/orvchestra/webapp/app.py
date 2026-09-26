@@ -21,6 +21,7 @@ from orvchestra.media.app import build_media_router
 from orvchestra.playback.service import PlaybackService
 from orvchestra.webapp.api import build_api_router
 from orvchestra.webapp.playlists_api import build_playlists_router
+from orvchestra.webapp.radio_api import build_radio_router
 from orvchestra.webapp.stats_api import build_stats_router
 
 logger = logging.getLogger("orvchestra.webapp")
@@ -54,6 +55,7 @@ def create_app(conn: sqlite3.Connection, media_base_url: str, playback: Playback
     app.include_router(build_api_router(conn, media_base_url, playback))
     app.include_router(build_stats_router(conn, media_base_url))
     app.include_router(build_playlists_router(conn, media_base_url))
+    app.include_router(build_radio_router(conn, playback))
 
     @app.get("/{full_path:path}")
     async def spa(full_path: str) -> FileResponse:

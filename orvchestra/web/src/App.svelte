@@ -16,6 +16,7 @@
   import Stats from "./routes/Stats.svelte";
   import Equalizer from "./routes/Equalizer.svelte";
   import Lyrics from "./routes/Lyrics.svelte";
+  import Radio from "./routes/Radio.svelte";
 
   let audioEl;
 
@@ -49,12 +50,14 @@
     if (path === "/stats") return { component: Stats, props: {} };
     if (path === "/equalizer") return { component: Equalizer, props: {} };
     if (path === "/lyrics") return { component: Lyrics, props: {} };
+    if (path === "/radio") return { component: Radio, props: {} };
     return { component: Home, props: {} };
   });
 
   const tabs = [
     { path: "/", label: "Home", icon: "🏠" },
     { path: "/search", label: "Search", icon: "🔍" },
+    { path: "/radio", label: "Radio", icon: "📻" },
     { path: "/queue", label: "Queue", icon: "🎵" },
     { path: "/playlists", label: "Playlists", icon: "📃" },
     { path: "/stats", label: "Stats", icon: "📊" },
