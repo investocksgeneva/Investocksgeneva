@@ -11,6 +11,8 @@
     refreshOutputs,
   } from "../lib/player.svelte.js";
   import { api, formatDuration, hiResBadge } from "../lib/api.js";
+  import { navigate } from "../lib/router.svelte.js";
+  import { resumeContext } from "../lib/equalizer.svelte.js";
 
   let seeking = $state(false);
   let seekValue = $state(0);
@@ -82,7 +84,11 @@
 
     <div class="transport-controls">
       <button onclick={previous} aria-label="Previous track">⏮</button>
-      <button class="play-button" onclick={togglePlayPause} aria-label={player.isPlaying ? "Pause" : "Play"}>
+      <button
+        class="play-button"
+        onclick={() => { resumeContext(); togglePlayPause(); }}
+        aria-label={player.isPlaying ? "Pause" : "Play"}
+      >
         {player.isPlaying ? "⏸" : "▶"}
       </button>
       <button onclick={next} aria-label="Next track">⏭</button>
@@ -99,6 +105,8 @@
         oninput={(event) => setVolume(Number(event.target.value))}
       />
     </div>
+
+    <button class="link-button" onclick={() => navigate("/equalizer")}>🎚️ Equalizer</button>
   {/if}
 
   <div class="output-picker">
