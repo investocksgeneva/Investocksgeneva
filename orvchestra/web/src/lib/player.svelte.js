@@ -15,6 +15,7 @@
 // which is where the this-device/renderer branch happens.
 
 import { api, trackStreamUrl } from "./api.js";
+import { loadStream, stopStream } from "./streamSource.js";
 
 const THIS_DEVICE = "this-device";
 const RENDERER_POLL_INTERVAL_MS = 1000;
@@ -36,6 +37,10 @@ export const player = $state({
 let audioEl = null;
 let pollTimer = null;
 let lastReportedProgressAt = 0;
+// hls.js rewrites audioEl.src to an internal blob: URL once attached, so the
+// "is this already loaded" check has to compare against the URL we asked
+// for, not whatever the element's own .src happens to read afterward.
+let currentLoadedUrl = null;
 
 // Throttled so a this-device play gets recorded via the same threshold
 // logic a WiiM play does (see PlaybackService.report_browser_position)
@@ -105,8 +110,9 @@ async function applyNowPlaying(np) {
   if (player.selectedOutput === THIS_DEVICE) {
     if (audioEl && np.track) {
       const url = trackStreamUrl(np.track);
-      if (!audioEl.src.endsWith(url)) {
-        audioEl.src = url;
+      if (currentLoadedUrl !== url) {
+        currentLoadedUrl = url;
+        await loadStream(audioEl, url);
         lastReportedProgressAt = 0; // report promptly on the new track, don't wait out the old throttle window
         try {
           await audioEl.play();
@@ -116,8 +122,8 @@ async function applyNowPlaying(np) {
         }
       }
     } else if (audioEl) {
-      audioEl.pause();
-      audioEl.removeAttribute("src");
+      currentLoadedUrl = null;
+      stopStream(audioEl);
     }
     return;
   }
@@ -159,8 +165,8 @@ export async function selectOutput(id) {
   if (id !== THIS_DEVICE) {
     startPolling();
   } else if (audioEl) {
-    audioEl.pause();
-    audioEl.removeAttribute("src");
+    currentLoadedUrl = null;
+    stopStream(audioEl);
   }
 }
 
