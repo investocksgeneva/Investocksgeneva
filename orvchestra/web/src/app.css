@@ -323,6 +323,32 @@ h3 {
   margin-top: 10px;
 }
 
+.stat-tiles {
+  display: flex;
+  gap: 12px;
+}
+
+.stat-tile {
+  flex: 1;
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 16px 12px;
+  text-align: center;
+}
+
+.stat-tile .stat-value {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-tile .stat-label {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 .chip-row {
   display: flex;
   flex-wrap: wrap;

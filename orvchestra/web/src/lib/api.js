@@ -91,6 +91,12 @@ export function formatDuration(totalSeconds) {
   return `${minutes}:${String(secs).padStart(2, "0")}`;
 }
 
+const _compactNumber = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
+
+export function formatCompactNumber(n) {
+  return _compactNumber.format(n ?? 0);
+}
+
 export function hiResBadge(track) {
   if (!track) return null;
   const parts = [track.codec];

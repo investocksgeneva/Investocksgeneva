@@ -151,6 +151,7 @@ def build_api_router(conn: sqlite3.Connection, media_base_url: str, playback: Pl
     @router.get("/home")
     async def home() -> dict[str, Any]:
         encore_cutoff = repo.iso_now_minus_days(365)
+        stats = repo.library_stats(conn)
         return {
             "recently_added": [album_json(r) for r in repo.list_recent_albums(conn, _RECENT_ALBUMS_LIMIT)],
             "recently_played": albums_with_extra(
@@ -161,6 +162,11 @@ def build_api_router(conn: sqlite3.Connection, media_base_url: str, playback: Pl
             "rediscover": albums_with_extra(
                 conn, album_json, repo.encore_albums(conn, encore_cutoff, _RECENT_ALBUMS_LIMIT), "last_played"
             ),
+            "library": {
+                "tracks": stats["total_tracks"],
+                "albums": stats["albums"],
+                "artists": stats["artists"],
+            },
         }
 
     @router.get("/search")

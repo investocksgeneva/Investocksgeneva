@@ -1,6 +1,6 @@
 <script>
   import { onMount } from "svelte";
-  import { api } from "../lib/api.js";
+  import { api, formatCompactNumber } from "../lib/api.js";
   import AlbumGrid from "../lib/AlbumGrid.svelte";
 
   let data = $state(null);
@@ -42,4 +42,20 @@
   {:else}
     <p class="empty-state">Albums you haven't played in 12+ months will show up here.</p>
   {/if}
+
+  <div class="section-title">Library</div>
+  <div class="stat-tiles">
+    <div class="stat-tile">
+      <div class="stat-value">{formatCompactNumber(data.library.tracks)}</div>
+      <div class="stat-label">Songs</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-value">{formatCompactNumber(data.library.albums)}</div>
+      <div class="stat-label">Albums</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-value">{formatCompactNumber(data.library.artists)}</div>
+      <div class="stat-label">Artists</div>
+    </div>
+  </div>
 {/if}
