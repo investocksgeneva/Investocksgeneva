@@ -65,6 +65,38 @@ function activeEl() {
   return player.currentTrack?.is_radio ? radioAudioEl : audioEl;
 }
 
+// Tells the OS this page has a real "now playing" session worth protecting
+// -- without it, a phone is free to suspend a backgrounded/screen-locked
+// tab's audio at any time, since nothing signals that it matters. This is
+// also what puts playback controls on the lock screen / control center.
+function updateMediaSession() {
+  if (!("mediaSession" in navigator)) return;
+  const track = player.currentTrack;
+  navigator.mediaSession.metadata = track
+    ? new MediaMetadata({
+        title: track.title || "",
+        artist: track.artist || track.album_artist || "",
+        album: track.is_radio ? "" : track.album || "",
+        artwork: track.art_url_large ? [{ src: track.art_url_large, sizes: "512x512", type: "image/jpeg" }] : [],
+      })
+    : null;
+  navigator.mediaSession.playbackState = player.isPlaying ? "playing" : "paused";
+}
+
+function setUpMediaSessionActions() {
+  if (!("mediaSession" in navigator)) return;
+  navigator.mediaSession.setActionHandler("play", () => {
+    if (player.selectedOutput === THIS_DEVICE) activeEl()?.play().catch(() => {});
+    else api.resume().then(applyNowPlaying).catch(() => {});
+  });
+  navigator.mediaSession.setActionHandler("pause", () => {
+    if (player.selectedOutput === THIS_DEVICE) activeEl()?.pause();
+    else api.pause().then(applyNowPlaying).catch(() => {});
+  });
+  navigator.mediaSession.setActionHandler("previoustrack", () => previous());
+  navigator.mediaSession.setActionHandler("nexttrack", () => next());
+}
+
 function wireTransportEvents(el, isRadio) {
   // Both elements sit bound at all times, but only one is ever "the" active
   // source at once -- a stray event from the currently-inactive one (e.g.
@@ -75,11 +107,13 @@ function wireTransportEvents(el, isRadio) {
     if (!isActive()) return;
     player.isPlaying = true;
     api.browserState(true).catch(() => {});
+    updateMediaSession();
   });
   el.addEventListener("pause", () => {
     if (!isActive()) return;
     player.isPlaying = false;
     api.browserState(false).catch(() => {});
+    updateMediaSession();
   });
 
   if (isRadio) {
@@ -89,6 +123,7 @@ function wireTransportEvents(el, isRadio) {
       if (!isActive()) return;
       player.isPlaying = false;
       api.browserState(false).catch(() => {});
+      updateMediaSession();
     });
     return;
   }
@@ -161,6 +196,7 @@ function stopBoth() {
 async function applyNowPlaying(np) {
   player.queuePosition = np.queue_position ?? player.queuePosition;
   player.currentTrack = np.track ?? null;
+  updateMediaSession();
 
   if (player.selectedOutput === THIS_DEVICE) {
     if (!np.track) {
@@ -204,6 +240,7 @@ async function applyNowPlaying(np) {
   if ("position_seconds" in np) player.positionSeconds = np.position_seconds ?? 0;
   if ("duration_seconds" in np) player.durationSeconds = np.duration_seconds;
   if ("volume" in np && np.volume != null) player.volume = np.volume;
+  updateMediaSession(); // playbackState above may have just changed
 }
 
 async function refreshQueueList() {
@@ -213,6 +250,7 @@ async function refreshQueueList() {
 }
 
 export async function initPlayer() {
+  setUpMediaSessionActions();
   player.outputs = await api.outputs();
   const selected = player.outputs.find((o) => o.selected);
   if (selected) player.selectedOutput = selected.id;
