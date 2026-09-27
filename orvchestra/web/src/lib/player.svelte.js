@@ -26,6 +26,7 @@
 
 import { api, trackStreamUrl } from "./api.js";
 import { loadStream, stopStream } from "./streamSource.js";
+import { ensureGraph, resumeContext } from "./equalizer.svelte.js";
 
 const THIS_DEVICE = "this-device";
 const RENDERER_POLL_INTERVAL_MS = 1000;
@@ -63,6 +64,20 @@ const PROGRESS_REPORT_INTERVAL_MS = 5000;
 
 function activeEl() {
   return player.currentTrack?.is_radio ? radioAudioEl : audioEl;
+}
+
+// Deliberately NOT called automatically on every play -- iOS Safari treats
+// an <audio> element connected to a Web Audio graph as less eligible for
+// reliable background/lock-screen playback than a plain one, independent of
+// the separate CORS-tainting issue that made radio need its own element.
+// Local-track playback (the common case) stays untouched by Web Audio
+// unless the user explicitly opens the Equalizer or turns on the
+// visualizer -- a deliberate choice to accept, not the default.
+export function enableWebAudioGraph() {
+  if (audioEl) {
+    ensureGraph(audioEl);
+    resumeContext();
+  }
 }
 
 // Tells the OS this page has a real "now playing" session worth protecting

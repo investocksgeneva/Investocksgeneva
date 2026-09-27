@@ -9,6 +9,7 @@
     setVolume,
     selectOutput,
     refreshOutputs,
+    enableWebAudioGraph,
   } from "../lib/player.svelte.js";
   import { api, formatDuration, hiResBadge } from "../lib/api.js";
   import { navigate } from "../lib/router.svelte.js";
@@ -17,6 +18,17 @@
 
   let seeking = $state(false);
   let seekValue = $state(0);
+  // Off by default: showing it is what opts an "ordinary" play into Web
+  // Audio at all (see enableWebAudioGraph's docstring) -- this screen is
+  // exactly the one people check constantly while just listening, so the
+  // visualizer can't be on unconditionally without reintroducing the same
+  // background-playback problem for every local track.
+  let showVisualizer = $state(false);
+
+  function toggleVisualizer() {
+    if (!showVisualizer) enableWebAudioGraph();
+    showVisualizer = !showVisualizer;
+  }
 
   async function rate(value) {
     const track = player.currentTrack;
@@ -73,7 +85,14 @@
       </div>
     {/if}
 
-    <Visualizer />
+    {#if !player.currentTrack.is_radio}
+      <button class="link-button" onclick={toggleVisualizer}>
+        {showVisualizer ? "Hide visualizer" : "📊 Visualizer"}
+      </button>
+      {#if showVisualizer}
+        <Visualizer />
+      {/if}
+    {/if}
 
     {#if !player.currentTrack.is_radio}
       <input

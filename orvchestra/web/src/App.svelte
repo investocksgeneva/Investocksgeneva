@@ -2,7 +2,6 @@
   import { onMount } from "svelte";
   import { route, navigate } from "./lib/router.svelte.js";
   import { player, initPlayer, bindAudioElement, bindRadioAudioElement } from "./lib/player.svelte.js";
-  import { ensureGraph, resumeContext } from "./lib/equalizer.svelte.js";
   import MiniPlayer from "./lib/MiniPlayer.svelte";
   import Home from "./routes/Home.svelte";
   import Search from "./routes/Search.svelte";
@@ -32,13 +31,6 @@
     // simply not applying to it.
     bindRadioAudioElement(radioAudioEl);
     initPlayer();
-    // Built on first play, not here: an AudioContext created before a user
-    // gesture stays suspended on iOS Safari, and connecting the element to
-    // the Web Audio graph is a one-time, irreversible step.
-    audioEl.addEventListener("play", () => {
-      ensureGraph(audioEl);
-      resumeContext();
-    });
   });
 
   function decodeSegment(path, prefix) {

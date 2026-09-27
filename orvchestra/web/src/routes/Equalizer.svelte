@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from "svelte";
   import {
     eq,
     EQ_BANDS,
@@ -8,6 +9,14 @@
     applyPreset,
     resetEq,
   } from "../lib/equalizer.svelte.js";
+  import { enableWebAudioGraph } from "../lib/player.svelte.js";
+
+  // Opening this screen is the explicit signal that Web Audio should get
+  // involved at all -- see player.svelte.js's enableWebAudioGraph for why
+  // that's not just done automatically on every play.
+  onMount(() => {
+    enableWebAudioGraph();
+  });
 </script>
 
 <h1>Equalizer</h1>
