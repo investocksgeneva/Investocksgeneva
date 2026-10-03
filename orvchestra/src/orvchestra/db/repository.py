@@ -403,6 +403,23 @@ def library_stats(conn: sqlite3.Connection) -> dict:
     }
 
 
+def list_tracks_by_codec(conn: sqlite3.Connection, codec: str) -> list[sqlite3.Row]:
+    """Every online track with the given codec, full path included -- e.g.
+    for finding which specific files are MP3 rather than FLAC in an
+    otherwise-lossless library. Case-insensitive so "mp3"/"MP3" both match
+    how codec is actually stored (see scanner/tags.py)."""
+    return conn.execute(
+        """
+        SELECT tracks.*, roots.path AS root_path
+        FROM tracks JOIN roots ON roots.id = tracks.root_id
+        WHERE tracks.online = 1 AND UPPER(tracks.codec) = UPPER(?)
+        ORDER BY tracks.artist COLLATE NOCASE, tracks.album COLLATE NOCASE,
+                 COALESCE(tracks.disc_number, 1), COALESCE(tracks.track_number, 999999)
+        """,
+        (codec,),
+    ).fetchall()
+
+
 def count_offline_tracks(conn: sqlite3.Connection) -> int:
     return conn.execute("SELECT COUNT(*) AS n FROM tracks WHERE online = 0").fetchone()["n"]
 

@@ -17,6 +17,7 @@ from orvchestra.db.repository import (
     get_root_by_path,
     library_stats,
     list_roots,
+    list_tracks_by_codec,
     purge_offline_tracks,
     remove_root,
 )
@@ -190,6 +191,28 @@ def purge_offline(yes: bool) -> None:
 
     purged = purge_offline_tracks(conn)
     click.echo(f"Purged {purged} track(s).")
+
+
+@main.command("find-codec")
+@click.argument("codec")
+def find_codec(codec: str) -> None:
+    """List every track with the given codec (e.g. MP3, AAC, ALAC, WAV) and
+    its full path -- for finding which specific files aren't FLAC in an
+    otherwise-lossless library. "orvchestra stats" shows the counts; this
+    shows exactly which files they are."""
+    conn = connect(paths.db_path())
+    rows = list_tracks_by_codec(conn, codec)
+    if not rows:
+        click.echo(f"No tracks found with codec \"{codec}\".")
+        return
+
+    click.echo(f'{len(rows)} track(s) with codec "{codec.upper()}":\n')
+    for row in rows:
+        full_path = Path(row["root_path"]) / row["rel_path"]
+        artist = row["artist"] or "Unknown Artist"
+        title = row["title"] or full_path.name
+        click.echo(f"{artist} — {title}")
+        click.echo(f"  {full_path}")
 
 
 @main.command()
