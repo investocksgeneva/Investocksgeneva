@@ -6,9 +6,9 @@ from pathlib import Path
 
 import click
 import uvicorn
-from async_upnp_client.utils import get_local_ip
 
 from orvchestra import paths
+from orvchestra.network import detect_lan_ip
 from orvchestra.db.connection import connect
 from orvchestra.db.repository import (
     add_root,
@@ -224,7 +224,7 @@ def serve(dlna_port: int, web_port: int, host: str | None) -> None:
 
 async def _serve(dlna_port: int, web_port: int, host: str | None) -> None:
     conn = connect(paths.db_path())
-    local_ip = host or get_local_ip()
+    local_ip = host or detect_lan_ip()
     web_base_url = f"http://{local_ip}:{web_port}"
 
     keep_awake = KeepAwakeController()
