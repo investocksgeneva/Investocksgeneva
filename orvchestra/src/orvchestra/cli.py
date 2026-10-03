@@ -62,6 +62,29 @@ def roots_add(path: str, label: str | None) -> None:
     if get_root_by_path(conn, resolved) is not None:
         click.echo(f"Already tracked: {resolved}")
         return
+
+    resolved_path = Path(resolved)
+    for existing in list_roots(conn):
+        existing_path = Path(existing["path"])
+        if resolved_path.is_relative_to(existing_path):
+            click.echo(
+                f"Refusing to add: {resolved} is inside the already-tracked root {existing_path} "
+                "-- adding it too would scan the same files twice under two roots. "
+                "If you meant to replace the existing root, remove it first with "
+                f'"orvchestra roots remove \\"{existing_path}\\"".',
+                err=True,
+            )
+            sys.exit(1)
+        if existing_path.is_relative_to(resolved_path):
+            click.echo(
+                f"Refusing to add: the already-tracked root {existing_path} is inside {resolved}, "
+                "so adding this broader folder would scan those same files a second time. "
+                f'Remove the narrower root first with "orvchestra roots remove \\"{existing_path}\\"" '
+                "if you meant to widen it.",
+                err=True,
+            )
+            sys.exit(1)
+
     volume_uuid = get_volume_uuid(Path(resolved))
     add_root(conn, resolved, label, volume_uuid)
     click.echo(f"Added root: {resolved}")
