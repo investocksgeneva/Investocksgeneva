@@ -403,6 +403,40 @@ def library_stats(conn: sqlite3.Connection) -> dict:
     }
 
 
+def find_duplicate_tracks(conn: sqlite3.Connection) -> list[list[sqlite3.Row]]:
+    """Groups of online tracks that share an album grouping key, disc number,
+    and track number -- almost always separate files for the same piece of
+    music (a rip imported twice, a duplicate copy left behind by a sync
+    tool). Read-only: Orvchestra never deletes or moves files itself, so
+    this just surfaces full paths for the user to review and clean up by
+    hand. Uses the same grouping key as `v_albums` (see schema.py) so this
+    never disagrees with what the album view itself calls "the same album"."""
+    rows = conn.execute(
+        """
+        SELECT
+            CASE WHEN tracks.compilation THEN 'Various Artists'
+                 ELSE COALESCE(NULLIF(tracks.album_artist, ''), NULLIF(tracks.artist, ''), 'Unknown Artist')
+            END AS group_album_artist,
+            COALESCE(NULLIF(tracks.album, ''), 'Unknown Album') AS group_album,
+            tracks.year, tracks.disc_number, tracks.track_number,
+            tracks.id, tracks.title, tracks.duration_seconds, tracks.size,
+            roots.path AS root_path, tracks.rel_path
+        FROM tracks JOIN roots ON roots.id = tracks.root_id
+        -- A NULL track_number can't signal a duplicate by position -- it would
+        -- just lump every untagged track in an album together as "duplicates".
+        WHERE tracks.online = 1 AND tracks.track_number IS NOT NULL
+        ORDER BY group_album_artist, group_album, tracks.year, tracks.disc_number, tracks.track_number
+        """
+    ).fetchall()
+
+    groups: dict[tuple, list[sqlite3.Row]] = {}
+    for row in rows:
+        key = (row["group_album_artist"], row["group_album"], row["year"], row["disc_number"], row["track_number"])
+        groups.setdefault(key, []).append(row)
+
+    return [group for group in groups.values() if len(group) > 1]
+
+
 # --- listening history (plays) ---------------------------------------------
 #
 # A play is recorded once by PlaybackService (see playback/service.py) when

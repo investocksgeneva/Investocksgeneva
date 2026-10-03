@@ -10,7 +10,14 @@ from async_upnp_client.utils import get_local_ip
 
 from orvchestra import paths
 from orvchestra.db.connection import connect
-from orvchestra.db.repository import add_root, get_root_by_path, library_stats, list_roots, remove_root
+from orvchestra.db.repository import (
+    add_root,
+    find_duplicate_tracks,
+    get_root_by_path,
+    library_stats,
+    list_roots,
+    remove_root,
+)
 from orvchestra.dlna.server import DlnaMediaServer
 from orvchestra.playback.keepawake import KeepAwakeController
 from orvchestra.playback.service import PlaybackService
@@ -131,6 +138,27 @@ def stats() -> None:
     click.echo("By codec:")
     for codec, count in s["by_codec"].items():
         click.echo(f"  {codec}: {count}")
+
+
+@main.command()
+def duplicates() -> None:
+    """List tracks that look like duplicate files: same album, disc, and
+    track number appearing more than once. Read-only -- nothing is ever
+    deleted or moved; review the listed paths and remove extras yourself."""
+    conn = connect(paths.db_path())
+    groups = find_duplicate_tracks(conn)
+    if not groups:
+        click.echo("No likely duplicates found.")
+        return
+
+    for group in groups:
+        first = group[0]
+        click.echo(f"\n{first['group_album_artist']} — {first['group_album']} — track {first['track_number']}: {first['title']}")
+        for row in group:
+            full_path = Path(row["root_path"]) / row["rel_path"]
+            duration = _human_duration(row["duration_seconds"] or 0)
+            size = _human_size(row["size"])
+            click.echo(f"  {duration:>8}  {size:>8}  {full_path}")
 
 
 @main.command()
