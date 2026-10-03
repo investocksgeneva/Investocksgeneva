@@ -12,10 +12,12 @@ from orvchestra import paths
 from orvchestra.db.connection import connect
 from orvchestra.db.repository import (
     add_root,
+    count_offline_tracks,
     find_duplicate_tracks,
     get_root_by_path,
     library_stats,
     list_roots,
+    purge_offline_tracks,
     remove_root,
 )
 from orvchestra.dlna.server import DlnaMediaServer
@@ -161,6 +163,33 @@ def stats() -> None:
     click.echo("By codec:")
     for codec, count in s["by_codec"].items():
         click.echo(f"  {codec}: {count}")
+
+
+@main.command("purge-offline")
+@click.option("--yes", is_flag=True, help="Skip the confirmation prompt.")
+def purge_offline(yes: bool) -> None:
+    """Permanently delete every track currently marked offline, along with
+    its ratings and play history. Use this only for files you know are gone
+    for good -- a drive that's just temporarily unplugged should be left
+    alone, since reconnecting it brings those tracks back online with their
+    history intact. This never touches anything on disk; it only removes
+    the now-stale database rows those missing files left behind."""
+    conn = connect(paths.db_path())
+    count = count_offline_tracks(conn)
+    if count == 0:
+        click.echo("No offline tracks to purge.")
+        return
+
+    click.echo(f"{count} track(s) are currently offline.")
+    if not yes and not click.confirm(
+        "Permanently delete their database records (ratings and play history included)? "
+        "This cannot be undone, and doesn't affect any files on disk"
+    ):
+        click.echo("Cancelled.")
+        return
+
+    purged = purge_offline_tracks(conn)
+    click.echo(f"Purged {purged} track(s).")
 
 
 @main.command()

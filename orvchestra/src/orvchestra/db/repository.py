@@ -403,6 +403,22 @@ def library_stats(conn: sqlite3.Connection) -> dict:
     }
 
 
+def count_offline_tracks(conn: sqlite3.Connection) -> int:
+    return conn.execute("SELECT COUNT(*) AS n FROM tracks WHERE online = 0").fetchone()["n"]
+
+
+def purge_offline_tracks(conn: sqlite3.Connection) -> int:
+    """Permanently deletes every track currently marked offline -- for files
+    the user knows are gone for good, not a temporarily unplugged drive
+    (which should just be left offline so it can come back). Cascades to
+    that track's playlist memberships and play history (see schema.py's
+    ON DELETE CASCADE), unlike simply going offline, which keeps all of it.
+    Never touches anything on disk; this is a database-only operation."""
+    cur = conn.execute("DELETE FROM tracks WHERE online = 0")
+    conn.commit()
+    return cur.rowcount
+
+
 def find_duplicate_tracks(conn: sqlite3.Connection) -> list[list[sqlite3.Row]]:
     """Groups of online tracks that share an album grouping key, disc number,
     and track number -- almost always separate files for the same piece of
