@@ -11,7 +11,7 @@ export default defineConfig({
     svelte(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.png"],
+      includeAssets: ["favicon-v2.png"],
       manifest: {
         name: "Orvchestra",
         short_name: "Orvchestra",
@@ -21,9 +21,9 @@ export default defineConfig({
         display: "standalone",
         start_url: "/",
         icons: [
-          { src: "icons/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "icons/icon-512.png", sizes: "512x512", type: "image/png" },
-          { src: "icons/icon-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+          { src: "icons/icon-192-v2.png", sizes: "192x192", type: "image/png" },
+          { src: "icons/icon-512-v2.png", sizes: "512x512", type: "image/png" },
+          { src: "icons/icon-512-maskable-v2.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
       workbox: {
