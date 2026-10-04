@@ -65,7 +65,8 @@ def _radio_track_summary(station: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _track_summary(row: sqlite3.Row) -> dict[str, Any]:
+def _track_summary(row: sqlite3.Row, media_base_url: str) -> dict[str, Any]:
+    art_hash = row["art_hash"]
     return {
         "id": row["id"],
         "title": row["title"] or row["rel_path"].rsplit("/", 1)[-1],
@@ -79,8 +80,10 @@ def _track_summary(row: sqlite3.Row) -> dict[str, Any]:
         "codec": row["codec"],
         "sample_rate": row["sample_rate"],
         "bit_depth": row["bit_depth"],
-        "art_hash": row["art_hash"],
+        "art_hash": art_hash,
         "rating": row["rating"],
+        "art_url_small": f"{media_base_url}/art/{art_hash}/300.jpg" if art_hash else None,
+        "art_url_large": f"{media_base_url}/art/{art_hash}/1000.jpg" if art_hash else None,
     }
 
 
@@ -310,7 +313,7 @@ class PlaybackService:
             track_row = repo.get_track(self.conn, track_id) if track_id is not None else None
             result = {
                 "output": self.active_output,
-                "track": _track_summary(track_row) if track_row is not None else None,
+                "track": _track_summary(track_row, self.media_base_url) if track_row is not None else None,
                 "queue_position": self.queue_position,
                 "queue_length": len(self.queue),
             }
