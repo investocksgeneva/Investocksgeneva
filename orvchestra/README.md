@@ -13,6 +13,11 @@ now listening history, stats, and rule-based smart playlists — the whole
 day-to-day experience the project set out to build, minus a few
 conveniences left for Phase 5+.
 
+Setting Orvchestra up on a second machine (e.g. a home Mac and an office
+Mac)? See [`docs/NEW_MACHINE_SETUP.md`](docs/NEW_MACHINE_SETUP.md) — each
+install is fully independent (own library, history, ratings), which is the
+short version of what that doc covers.
+
 ## Requirements
 
 - Python 3.12+
