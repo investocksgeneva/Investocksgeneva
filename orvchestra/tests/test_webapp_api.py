@@ -146,6 +146,29 @@ def test_queue_and_playback_endpoints_against_this_device(db_conn, tmp_path):
     assert client.post("/api/queue/play", json={"track_ids": []}).status_code == 400
 
 
+def test_shuffle_and_repeat_endpoints(db_conn, tmp_path):
+    _seed(db_conn, tmp_path)
+    client = _client(db_conn)
+    track_ids = [r["id"] for r in db_conn.execute("SELECT id FROM tracks ORDER BY rel_path")]
+    client.post("/api/queue/play", json={"track_ids": track_ids, "start_index": 0})
+
+    resp = client.get("/api/queue")
+    assert resp.json()["shuffle"] is False
+    assert resp.json()["repeat_mode"] == "off"
+
+    resp = client.post("/api/playback/shuffle", json={"enabled": True})
+    assert resp.status_code == 200
+    assert resp.json()["shuffle"] is True
+    assert client.get("/api/queue").json()["shuffle"] is True
+
+    resp = client.post("/api/playback/repeat", json={"mode": "all"})
+    assert resp.status_code == 200
+    assert resp.json()["repeat_mode"] == "all"
+    assert client.get("/api/queue").json()["repeat_mode"] == "all"
+
+    assert client.post("/api/playback/repeat", json={"mode": "bogus"}).status_code == 400
+
+
 def test_stream_and_art_still_reachable_on_the_combined_app(db_conn, tmp_path):
     _seed(db_conn, tmp_path)
     client = _client(db_conn)

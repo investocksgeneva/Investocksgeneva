@@ -62,9 +62,15 @@ export const api = {
   pause: () => post("/api/playback/pause"),
   stop: () => post("/api/playback/stop"),
   next: () => post("/api/playback/next"),
+  // The this-device <audio> element's own "ended" event calls this instead
+  // of plain next() -- see player.svelte.js's autoAdvance() -- so repeat-one
+  // only replays a track that finished on its own, not one you skipped.
+  autoNext: () => post("/api/playback/next?auto=true"),
   previous: () => post("/api/playback/previous"),
   seek: (positionSeconds) => post("/api/playback/seek", { position_seconds: positionSeconds }),
   setVolume: (level) => post("/api/playback/volume", { level }),
+  setShuffle: (enabled) => post("/api/playback/shuffle", { enabled }),
+  setRepeat: (mode) => post("/api/playback/repeat", { mode }),
   browserState: (playing) => post("/api/playback/browser-state", { playing }),
   reportProgress: (positionSeconds) => post("/api/playback/progress", { position_seconds: positionSeconds }),
 

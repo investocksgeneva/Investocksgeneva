@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 import sqlite3
 from dataclasses import dataclass
 from datetime import timedelta
@@ -114,6 +115,14 @@ class PlaybackService:
         self.queue_position: int = 0
         self._current_radio: dict[str, Any] | None = None
 
+        # The queue as actually set (album/playlist/search order), kept
+        # around so shuffle can be turned off again without losing it --
+        # `self.queue` is what's actually played, and is a shuffled copy of
+        # this whenever shuffle is on.
+        self._unshuffled_queue: list[int] = []
+        self.shuffle_enabled: bool = False
+        self.repeat_mode: str = "off"  # "off" | "all" | "one"
+
         self._pushed_next_track_id: int | None = None
         self._poll_task: asyncio.Task | None = None
         self._play_session: _PlaySession | None = None
@@ -164,8 +173,40 @@ class PlaybackService:
 
     def set_queue(self, track_ids: list[int], start_index: int = 0) -> None:
         self._current_radio = None
-        self.queue = list(track_ids)
-        self.queue_position = max(0, min(start_index, len(self.queue) - 1)) if self.queue else 0
+        self._unshuffled_queue = list(track_ids)
+        start_id = track_ids[start_index] if track_ids and 0 <= start_index < len(track_ids) else None
+        if self.shuffle_enabled:
+            self.queue = self._shuffled(self._unshuffled_queue, keep_first=start_id)
+        else:
+            self.queue = list(self._unshuffled_queue)
+        self.queue_position = self.queue.index(start_id) if start_id is not None else 0
+        self._pushed_next_track_id = None
+
+    @staticmethod
+    def _shuffled(track_ids: list[int], keep_first: int | None) -> list[int]:
+        """A random order for the given tracks, with `keep_first` (if given
+        and present) pinned at the front -- shuffling the *upcoming* queue
+        around whatever's currently playing, rather than jumping to a
+        random track the moment shuffle is turned on."""
+        remaining = list(track_ids)
+        if keep_first is not None and keep_first in remaining:
+            remaining.remove(keep_first)
+        random.shuffle(remaining)
+        return ([keep_first] if keep_first is not None else []) + remaining
+
+    def set_shuffle(self, enabled: bool) -> None:
+        if enabled == self.shuffle_enabled:
+            return
+        self.shuffle_enabled = enabled
+        current_id = self.current_track_id()
+        self.queue = self._shuffled(self._unshuffled_queue, keep_first=current_id) if enabled else list(self._unshuffled_queue)
+        self.queue_position = self.queue.index(current_id) if current_id is not None and current_id in self.queue else 0
+        self._pushed_next_track_id = None
+
+    def set_repeat_mode(self, mode: str) -> None:
+        if mode not in ("off", "all", "one"):
+            raise ValueError(f"invalid repeat mode: {mode!r}")
+        self.repeat_mode = mode
         self._pushed_next_track_id = None
 
     def current_track_id(self) -> int | None:
@@ -174,8 +215,29 @@ class PlaybackService:
         return self.queue[self.queue_position]
 
     def next_track_id(self) -> int | None:
+        """What should play after the current track -- used both to decide
+        what `next()` moves to and what to gapless-pre-queue on a renderer,
+        so repeat/shuffle only need to be handled in one place for both."""
+        if self.repeat_mode == "one":
+            return self.current_track_id()
         idx = self.queue_position + 1
-        return self.queue[idx] if idx < len(self.queue) else None
+        if idx < len(self.queue):
+            return self.queue[idx]
+        if self.repeat_mode == "all" and self.queue:
+            return self.queue[0]
+        return None
+
+    def _advance_queue_position(self) -> None:
+        """Moves `queue_position` to wherever `next_track_id()` just said was
+        next -- repeat-one stays put (same track replaying), repeat-all
+        wraps to the start, otherwise a plain increment."""
+        if self.repeat_mode == "one":
+            return
+        idx = self.queue_position + 1
+        if idx < len(self.queue):
+            self.queue_position = idx
+        elif self.repeat_mode == "all" and self.queue:
+            self.queue_position = 0
 
     # --- transport control (DLNA renderers only) -------------------------
 
@@ -247,14 +309,31 @@ class PlaybackService:
         self._cancel_poll_task()
         self.keep_awake.set_active(self._renderer_keepawake_id(), False)
 
-    async def next(self) -> None:
-        if self.queue_position + 1 < len(self.queue):
-            self.queue_position += 1
+    async def next(self, *, auto: bool = False) -> None:
+        """Advances to the next track. `auto=True` means this is the track
+        finishing on its own (this-device's `<audio>` "ended" event) rather
+        than a deliberate skip -- only then does repeat-one replay the same
+        track, same as a real player's skip button overriding repeat-one for
+        one press. The WiiM's own gapless auto-advance doesn't go through
+        this method at all (see `_poll_once`), but applies the same rule via
+        `next_track_id()`."""
+        if auto and self.repeat_mode == "one":
+            await self.play_current()
+            return
+        idx = self.queue_position + 1
+        if idx < len(self.queue):
+            self.queue_position = idx
+            await self.play_current()
+        elif self.repeat_mode == "all" and self.queue:
+            self.queue_position = 0
             await self.play_current()
 
     async def previous(self) -> None:
         if self.queue_position > 0:
             self.queue_position -= 1
+            await self.play_current()
+        elif self.repeat_mode == "all" and self.queue:
+            self.queue_position = len(self.queue) - 1
             await self.play_current()
 
     async def seek(self, position_seconds: float) -> None:
@@ -307,6 +386,8 @@ class PlaybackService:
                 "track": _radio_track_summary(self._current_radio),
                 "queue_position": 0,
                 "queue_length": 0,
+                "shuffle": self.shuffle_enabled,
+                "repeat_mode": self.repeat_mode,
             }
         else:
             track_id = self.current_track_id()
@@ -316,6 +397,8 @@ class PlaybackService:
                 "track": _track_summary(track_row, self.media_base_url) if track_row is not None else None,
                 "queue_position": self.queue_position,
                 "queue_length": len(self.queue),
+                "shuffle": self.shuffle_enabled,
+                "repeat_mode": self.repeat_mode,
             }
         renderer = self.active_renderer
         if renderer is not None:
@@ -367,7 +450,7 @@ class PlaybackService:
                 # fresh play session for the new track *before* noting
                 # position below, so this tick's position isn't attributed
                 # to the track that just finished.
-                self.queue_position += 1
+                self._advance_queue_position()
                 self._pushed_next_track_id = None
                 new_track_id = self.current_track_id()
                 if new_track_id is not None:
@@ -381,6 +464,13 @@ class PlaybackService:
 
         if state == TransportState.STOPPED and self.next_track_id() is None:
             self._cancel_poll_task()
+            return
+
+        # Cheap no-op when already correct (see its own guard) -- catches
+        # shuffle/repeat being toggled mid-playback, which invalidates
+        # whatever was gapless-pre-queued, within one poll tick rather than
+        # waiting for the track to actually change.
+        await self._push_next_if_needed()
 
     async def shutdown(self) -> None:
         self._cancel_poll_task()

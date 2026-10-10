@@ -43,6 +43,8 @@ export const player = $state({
   volume: 1,
   loading: false,
   error: null,
+  shuffle: false,
+  repeatMode: "off", // "off" | "all" | "one"
 });
 
 let audioEl = null;
@@ -164,7 +166,9 @@ function wireTransportEvents(el, isRadio) {
     if (!isActive()) return;
     await api.reportProgress(el.duration || el.currentTime).catch(() => {});
     await api.browserState(false).catch(() => {});
-    await next();
+    // Not a deliberate skip -- autoAdvance() lets repeat-one replay this
+    // track, same as the WiiM's own gapless auto-advance does.
+    await autoAdvance();
   });
 }
 
@@ -211,6 +215,8 @@ function stopBoth() {
 async function applyNowPlaying(np) {
   player.queuePosition = np.queue_position ?? player.queuePosition;
   player.currentTrack = np.track ?? null;
+  if ("shuffle" in np) player.shuffle = np.shuffle;
+  if ("repeat_mode" in np) player.repeatMode = np.repeat_mode;
   updateMediaSession();
 
   if (player.selectedOutput === THIS_DEVICE) {
@@ -259,9 +265,11 @@ async function applyNowPlaying(np) {
 }
 
 async function refreshQueueList() {
-  const { tracks, position } = await api.queue();
+  const { tracks, position, shuffle, repeat_mode } = await api.queue();
   player.queueTracks = tracks;
   player.queuePosition = position;
+  if (shuffle !== undefined) player.shuffle = shuffle;
+  if (repeat_mode !== undefined) player.repeatMode = repeat_mode;
 }
 
 export async function initPlayer() {
@@ -340,8 +348,28 @@ export async function next() {
   await applyNowPlaying(await api.next());
 }
 
+// Used only by the this-device <audio> element's own "ended" event (see
+// wireTransportEvents above) -- distinct from next() so repeat-one only
+// replays a track that finished on its own, not one a deliberate skip
+// (the next() exported above, used by transport buttons) moved past.
+async function autoAdvance() {
+  await applyNowPlaying(await api.autoNext());
+}
+
 export async function previous() {
   await applyNowPlaying(await api.previous());
+}
+
+export async function toggleShuffle() {
+  await applyNowPlaying(await api.setShuffle(!player.shuffle));
+  await refreshQueueList().catch(() => {});
+}
+
+const _REPEAT_CYCLE = ["off", "all", "one"];
+
+export async function cycleRepeat() {
+  const nextMode = _REPEAT_CYCLE[(_REPEAT_CYCLE.indexOf(player.repeatMode) + 1) % _REPEAT_CYCLE.length];
+  await applyNowPlaying(await api.setRepeat(nextMode));
 }
 
 export async function seek(seconds) {

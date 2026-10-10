@@ -358,6 +358,161 @@ def test_browser_playback_records_play_via_reported_position(db_conn, tmp_path):
     assert plays[0]["device"] == "browser"
 
 
+def test_repeat_one_manual_next_advances_normally(db_conn, tmp_path):
+    """A deliberate skip overrides repeat-one for that one press -- only the
+    track ending on its own should replay it (see test below)."""
+    track_ids = _seed_three_tracks(db_conn, tmp_path)
+    service = _service(db_conn)
+    service.set_queue(track_ids)
+    service.set_repeat_mode("one")
+    asyncio.run(service.play_current())
+
+    asyncio.run(service.next())
+    assert service.queue_position == 1
+
+
+def test_repeat_one_auto_advance_replays_same_track(db_conn, tmp_path):
+    track_ids = _seed_three_tracks(db_conn, tmp_path)
+    service = _service(db_conn)
+    service.set_queue(track_ids)
+    service.set_repeat_mode("one")
+    asyncio.run(service.play_current())
+
+    asyncio.run(service.next(auto=True))
+    assert service.queue_position == 0  # stayed on the same track
+
+
+def test_repeat_one_gapless_requeues_same_track_on_wiim(db_conn, tmp_path):
+    track_ids = _seed_three_tracks(db_conn, tmp_path)
+    service = _service(db_conn)
+    renderer = FakeRenderer()
+    service.renderers = {renderer.udn: renderer}
+    service.select_output(renderer.udn)
+    service.set_queue(track_ids)
+    service.set_repeat_mode("one")
+
+    asyncio.run(service.play_current())
+    track1_url, _, _ = service._track_url_and_metadata(track_ids[0])
+    assert renderer._next_uri == track1_url  # pre-queued itself as "next"
+    assert service._pushed_next_track_id == track_ids[0]
+
+    renderer.simulate_auto_advance()  # renderer loops back onto track 1
+    asyncio.run(service._poll_once())
+
+    assert service.queue_position == 0  # didn't move to track 2
+    assert renderer._next_uri == track1_url  # still looping itself
+
+
+def test_repeat_all_wraps_queue_on_manual_next(db_conn, tmp_path):
+    track_ids = _seed_three_tracks(db_conn, tmp_path)
+    service = _service(db_conn)
+    service.set_queue(track_ids, start_index=2)  # start at the last track
+    service.set_repeat_mode("all")
+    asyncio.run(service.play_current())
+
+    asyncio.run(service.next())
+    assert service.queue_position == 0  # wrapped back to the start
+
+
+def test_repeat_all_wraps_queue_on_gapless_auto_advance(db_conn, tmp_path):
+    track_ids = _seed_three_tracks(db_conn, tmp_path)
+    service = _service(db_conn)
+    renderer = FakeRenderer()
+    service.renderers = {renderer.udn: renderer}
+    service.select_output(renderer.udn)
+    service.set_queue(track_ids, start_index=2)
+    service.set_repeat_mode("all")
+
+    asyncio.run(service.play_current())
+    track1_url, _, _ = service._track_url_and_metadata(track_ids[0])
+    assert renderer._next_uri == track1_url  # wrapped pre-queue already
+
+    renderer.simulate_auto_advance()
+    asyncio.run(service._poll_once())
+
+    assert service.queue_position == 0
+
+
+def test_repeat_all_wraps_backward_on_previous_at_start(db_conn, tmp_path):
+    track_ids = _seed_three_tracks(db_conn, tmp_path)
+    service = _service(db_conn)
+    service.set_queue(track_ids)  # starts at position 0
+    service.set_repeat_mode("all")
+    asyncio.run(service.play_current())
+
+    asyncio.run(service.previous())
+    assert service.queue_position == 2  # wrapped to the last track
+
+
+def test_repeat_off_still_stops_at_end_of_queue(db_conn, tmp_path):
+    """Regression guard: default behavior (no repeat) must be unchanged."""
+    track_ids = _seed_three_tracks(db_conn, tmp_path)
+    service = _service(db_conn)
+    service.set_queue(track_ids, start_index=2)
+    asyncio.run(service.play_current())
+
+    asyncio.run(service.next())
+    assert service.queue_position == 2  # no-op, stayed put
+
+    asyncio.run(service.next(auto=True))
+    assert service.queue_position == 2  # auto-advance is also a no-op
+
+
+def test_shuffle_keeps_current_track_first_and_reorders_rest(db_conn, tmp_path):
+    track_ids = _seed_three_tracks(db_conn, tmp_path)
+    service = _service(db_conn)
+    service.set_queue(track_ids, start_index=1)  # currently playing track 2
+    current = service.current_track_id()
+    assert current == track_ids[1]
+
+    service.set_shuffle(True)
+
+    assert service.shuffle_enabled is True
+    assert service.current_track_id() == current  # didn't jump to a different track
+    assert set(service.queue) == set(track_ids)  # same tracks, just reordered
+    assert len(service.queue) == len(track_ids)
+
+
+def test_shuffle_off_restores_original_order_and_position(db_conn, tmp_path):
+    track_ids = _seed_three_tracks(db_conn, tmp_path)
+    service = _service(db_conn)
+    service.set_queue(track_ids, start_index=1)
+    current = service.current_track_id()
+
+    service.set_shuffle(True)
+    service.set_shuffle(False)
+
+    assert service.shuffle_enabled is False
+    assert service.queue == track_ids  # back to the exact original order
+    assert service.current_track_id() == current  # still on the same track
+
+
+def test_shuffle_invalidates_pending_gapless_push(db_conn, tmp_path):
+    track_ids = _seed_three_tracks(db_conn, tmp_path)
+    service = _service(db_conn)
+    renderer = FakeRenderer()
+    service.renderers = {renderer.udn: renderer}
+    service.select_output(renderer.udn)
+    service.set_queue(track_ids)
+    asyncio.run(service.play_current())
+    assert service._pushed_next_track_id == track_ids[1]
+
+    service.set_shuffle(True)
+    assert service._pushed_next_track_id is None  # stale pre-queue cleared
+
+    asyncio.run(service._poll_once())  # the unconditional re-push catches up
+    assert service._pushed_next_track_id == service.next_track_id()
+
+
+def test_invalid_repeat_mode_rejected(db_conn):
+    service = _service(db_conn)
+    try:
+        service.set_repeat_mode("bogus")
+        assert False, "expected ValueError"
+    except ValueError:
+        pass
+
+
 def test_unknown_duration_falls_back_to_four_minute_threshold(db_conn, tmp_path):
     track_ids = _seed_three_tracks(db_conn, tmp_path)
     db_conn.execute("UPDATE tracks SET duration_seconds = NULL WHERE id = ?", (track_ids[0],))

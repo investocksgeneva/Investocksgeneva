@@ -41,6 +41,14 @@ class VolumeRequest(BaseModel):
     level: float
 
 
+class ShuffleRequest(BaseModel):
+    enabled: bool
+
+
+class RepeatRequest(BaseModel):
+    mode: str
+
+
 class BrowserStateRequest(BaseModel):
     playing: bool
 
@@ -270,7 +278,12 @@ def build_api_router(conn: sqlite3.Connection, media_base_url: str, playback: Pl
             row = repo.get_track(conn, track_id)
             if row is not None:
                 tracks.append(track_json(row))
-        return {"tracks": tracks, "position": playback.queue_position}
+        return {
+            "tracks": tracks,
+            "position": playback.queue_position,
+            "shuffle": playback.shuffle_enabled,
+            "repeat_mode": playback.repeat_mode,
+        }
 
     @router.post("/queue/play")
     async def play_queue(body: QueuePlayRequest) -> dict[str, Any]:
@@ -296,8 +309,11 @@ def build_api_router(conn: sqlite3.Connection, media_base_url: str, playback: Pl
         return playback.now_playing()
 
     @router.post("/playback/next")
-    async def next_track() -> dict[str, Any]:
-        await playback.next()
+    async def next_track(auto: bool = False) -> dict[str, Any]:
+        # `auto=true` is this-device's <audio> element reporting a track
+        # finished on its own, not a deliberate skip -- only then does
+        # repeat-one replay the same track rather than genuinely advancing.
+        await playback.next(auto=auto)
         return playback.now_playing()
 
     @router.post("/playback/previous")
@@ -313,6 +329,18 @@ def build_api_router(conn: sqlite3.Connection, media_base_url: str, playback: Pl
     @router.post("/playback/volume")
     async def set_volume(body: VolumeRequest) -> dict[str, Any]:
         await playback.set_volume(body.level)
+        return playback.now_playing()
+
+    @router.post("/playback/shuffle")
+    async def set_shuffle(body: ShuffleRequest) -> dict[str, Any]:
+        playback.set_shuffle(body.enabled)
+        return playback.now_playing()
+
+    @router.post("/playback/repeat")
+    async def set_repeat(body: RepeatRequest) -> dict[str, Any]:
+        if body.mode not in ("off", "all", "one"):
+            raise HTTPException(400, "mode must be one of: off, all, one")
+        playback.set_repeat_mode(body.mode)
         return playback.now_playing()
 
     @router.post("/playback/browser-state")

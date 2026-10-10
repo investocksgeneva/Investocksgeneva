@@ -435,6 +435,16 @@ h3 {
   font-size: 1.8rem;
 }
 
+.shuffle-repeat-btn {
+  font-size: 1.2rem !important;
+  opacity: 0.5;
+}
+
+.shuffle-repeat-btn.active {
+  opacity: 1;
+  color: var(--accent);
+}
+
 .volume-row {
   display: flex;
   align-items: center;

@@ -10,6 +10,8 @@
     selectOutput,
     refreshOutputs,
     enableWebAudioGraph,
+    toggleShuffle,
+    cycleRepeat,
   } from "../lib/player.svelte.js";
   import { api, formatDuration, hiResBadge } from "../lib/api.js";
   import { navigate } from "../lib/router.svelte.js";
@@ -112,6 +114,14 @@
 
     <div class="transport-controls">
       {#if !player.currentTrack.is_radio}
+        <button
+          class="shuffle-repeat-btn"
+          class:active={player.shuffle}
+          onclick={toggleShuffle}
+          aria-label={player.shuffle ? "Shuffle on" : "Shuffle off"}
+        >
+          🔀
+        </button>
         <button onclick={previous} aria-label="Previous track">⏮</button>
       {/if}
       <button
@@ -123,6 +133,14 @@
       </button>
       {#if !player.currentTrack.is_radio}
         <button onclick={next} aria-label="Next track">⏭</button>
+        <button
+          class="shuffle-repeat-btn"
+          class:active={player.repeatMode !== "off"}
+          onclick={cycleRepeat}
+          aria-label={`Repeat: ${player.repeatMode}`}
+        >
+          {player.repeatMode === "one" ? "🔂" : "🔁"}
+        </button>
       {/if}
     </div>
 
