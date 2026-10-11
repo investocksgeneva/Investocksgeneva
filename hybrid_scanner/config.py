@@ -295,7 +295,9 @@ class RiskConfig:
     account_equity: float = 100_000.0
     risk_per_trade_pct: float = 0.01
     #: Hard cap on any single position's notional as a fraction of equity.
-    max_position_pct: float = 0.25
+    #: 10% lets a cash account hold ~10 positions, matching the default
+    #: backtest.max_positions; at 25% buying power ran out after ~4.
+    max_position_pct: float = 0.10
     lot_size: int = 1
 
     entry_method: EntryMethod = "close"

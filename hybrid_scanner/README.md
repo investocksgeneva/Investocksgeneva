@@ -119,12 +119,11 @@ python -m hybrid_scanner.main --universe sp500 --period 5y --portfolio --plot --
 * **Use `--period 5y` (or longer) for backtests.** The 200-SMA plus its slope
   window consumes about 10 months of warm-up, so `2y` leaves only around 14
   months of tradeable history.
-* **Expect buying power to bind before position slots.** With
-  `risk.max_position_pct=0.25`, a cash account is full after about four
-  positions, so the 10-slot and 6%-heat limits never bind. Check
-  `portfolio_skipped.csv`. If `buying_power` dominates, try
-  `--set risk.max_position_pct=0.10`, which gives more, smaller positions and
-  lets heat and slots do their job.
+* **Position cap vs. slots.** `risk.max_position_pct` defaults to 10%, so a
+  cash account can hold about 10 positions, matching `backtest.max_positions`.
+  At 25%, buying power ran out after about four positions and the slot and
+  heat limits never bound. Check `portfolio_skipped.csv` to see which
+  constraint binds.
 * **Survivorship bias.** `universes/sp500.csv` holds *today's* constituents
   (source: github.com/datasets/s-and-p-500-companies). Back-testing today's
   members over past years flatters results, because the losers that were
@@ -187,7 +186,7 @@ drawdown, not raw return.
 | Triggers | `confirmation.triggers`, `min_triggers` | engulfing, hammer, MA reclaim, micro-high break; ≥ 1 |
 | Stop | `risk.stop_method`, `stop_buffer_atr` | below pullback low − 0.2 ATR; floor 0.5 ATR; reject > 2.5 ATR |
 | Target | `risk.target_method`, `target_r_multiple` | 2R (`swing_high`, `max` available) |
-| Size | `risk.risk_per_trade_pct`, `max_position_pct` | 1% risk, ≤ 25% of equity per position |
+| Size | `risk.risk_per_trade_pct`, `max_position_pct` | 1% risk, ≤ 10% of equity per position |
 
 Dump all of them with `python -m hybrid_scanner.main --dump-config params.json`.
 
