@@ -1,0 +1,6 @@
+pandas>=2.2
+numpy>=1.26
+pydantic>=2.6
+yfinance>=0.2.40      # optional: live/EOD data (--source yfinance)
+matplotlib>=3.8       # optional: --plot
+pytest>=8             # dev
