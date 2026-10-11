@@ -219,3 +219,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# hybrid_scanner outputs
+output/
+data/cache/
