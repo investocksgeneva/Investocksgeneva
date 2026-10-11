@@ -341,6 +341,27 @@ class BacktestConfig:
     commission_per_share: float = 0.0
     slippage_pct: float = 0.0005
 
+    # --- Portfolio-level simulation (portfolio.py) ---------------------- #
+    #: Starting capital; None uses risk.account_equity.
+    initial_capital: float | None = None
+    #: Concurrent position limit — the real constraint on a swing book.
+    max_positions: int = 10
+    #: Portfolio "heat": total initial risk of open positions as a fraction
+    #: of equity. 6% at 1%/trade ≈ six full-risk positions at once.
+    max_portfolio_heat_pct: float = 0.06
+    #: Gross exposure / equity. 1.0 = cash account, no margin.
+    max_gross_exposure: float = 1.0
+    #: When signals outnumber free slots, take the best first by:
+    #: "rs_value" (strongest leader), "rr_to_swing_high" (most room),
+    #: "tightest_stop" (smallest stop in ATR), or "fifo" (ticker order).
+    signal_priority: str = "rs_value"
+    #: Size off current equity (compounding) rather than starting capital.
+    compound: bool = True
+    #: A position cut below this fraction of its full-risk size by heat or
+    #: buying-power limits is skipped rather than taken as a token position.
+    min_size_fraction: float = 0.25
+    risk_free_rate: float = 0.0
+
 
 @dataclass
 class OutputConfig:
@@ -396,6 +417,11 @@ class ScannerConfig:
             errors.append("risk.risk_per_trade_pct should be in (0, 0.05]")
         if r.min_stop_atr >= r.max_stop_atr:
             errors.append("risk.min_stop_atr must be < max_stop_atr")
+        bt = self.backtest
+        if bt.signal_priority not in {"rs_value", "rr_to_swing_high", "tightest_stop", "fifo"}:
+            errors.append(f"backtest.signal_priority {bt.signal_priority!r} not recognised")
+        if bt.max_positions < 1 or bt.max_portfolio_heat_pct <= 0 or bt.max_gross_exposure <= 0:
+            errors.append("backtest.max_positions, max_portfolio_heat_pct, max_gross_exposure must be positive")
         if self.data.timeframe not in self.mtf.htf_rule:
             errors.append(f"mtf.htf_rule has no entry for timeframe {self.data.timeframe!r}")
         if errors:

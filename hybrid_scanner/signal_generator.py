@@ -228,14 +228,18 @@ class HybridSignalGenerator:
                       as_of_ts, len(prepared), len(candidates), len(pending), len(signals))
         return ScanReport(as_of_ts, signals, candidates, rejections, pending, errors)
 
+    @property
+    def warmup_bars(self) -> int:
+        """First bar at which historical signals are considered."""
+        return max(self.cfg.data.min_bars // 2, self.cfg.pullback.impulse_lookback + 10)
+
     def signal_history(self, p: PreparedTicker, start: int | None = None) -> list[EntrySignal]:
         """Every signal the strategy would have generated, bar by bar.
 
         Stage 1 is vectorised, so we only run the (costlier) Stage 2 logic on
         bars that already passed momentum.
         """
-        warmup = max(self.cfg.data.min_bars // 2, self.cfg.pullback.impulse_lookback + 10)
-        start = warmup if start is None else max(start, 0)
+        start = self.warmup_bars if start is None else max(start, 0)
         passed = p.momentum["momentum_pass"].to_numpy()
         out: list[EntrySignal] = []
         for i in range(start, len(p.df)):

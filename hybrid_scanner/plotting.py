@@ -138,3 +138,70 @@ def plot_setup(
     else:
         plt.close(fig)
     return fig
+
+
+def plot_equity(
+    curve: pd.DataFrame,
+    benchmark_close: pd.Series | None = None,
+    path: str | Path | None = None,
+    title: str = "Portfolio backtest",
+    show: bool = False,
+):
+    """Equity vs. buy-and-hold benchmark (rebased to the same starting
+    capital, so one shared axis is honest), drawdown, and positions held."""
+    import matplotlib
+
+    if not show:
+        matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import FuncFormatter, PercentFormatter
+
+    c = PALETTE
+    eq = curve["equity"]
+    fig, (ax, axd, axp) = plt.subplots(3, 1, figsize=(12, 8), sharex=True,
+                                       gridspec_kw={"height_ratios": [3, 1.2, 0.8], "hspace": 0.08})
+    fig.patch.set_facecolor(c["surface"])
+    for a in (ax, axd, axp):
+        a.set_facecolor(c["surface"])
+        a.grid(True, color=c["grid"], linewidth=0.6)
+        a.set_axisbelow(True)
+        for side in ("top", "right"):
+            a.spines[side].set_visible(False)
+        for side in ("left", "bottom"):
+            a.spines[side].set_color(c["ink2"])
+        a.tick_params(colors=c["ink2"], labelsize=8)
+
+    ax.plot(eq.index, eq, color=c["series1"], linewidth=2, label="Strategy")
+    ax.annotate(f"Strategy {eq.iloc[-1]:,.0f}", (eq.index[-1], eq.iloc[-1]), xytext=(4, 0),
+                textcoords="offset points", va="center", fontsize=8, color=c["ink"])
+    if benchmark_close is not None:
+        b = benchmark_close.reindex(eq.index, method="ffill").dropna()
+        if len(b):
+            b = b / b.iloc[0] * eq.iloc[0]
+            ax.plot(b.index, b, color=c["ink2"], linewidth=1.5, linestyle="--", label="Benchmark (buy & hold)")
+            ax.annotate(f"Benchmark {b.iloc[-1]:,.0f}", (b.index[-1], b.iloc[-1]), xytext=(4, 0),
+                        textcoords="offset points", va="center", fontsize=8, color=c["ink"])
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _p: f"{v:,.0f}"))
+    ax.set_ylabel("Equity", color=c["ink2"], fontsize=8)
+    ax.legend(loc="upper left", frameon=False, fontsize=8, labelcolor=c["ink"])
+    ax.set_title(title, loc="left", fontsize=11, color=c["ink"])
+
+    dd = eq / eq.cummax() - 1.0
+    axd.fill_between(dd.index, dd, 0, color=c["series1"], alpha=0.25, linewidth=0)
+    axd.plot(dd.index, dd, color=c["series1"], linewidth=1)
+    axd.yaxis.set_major_formatter(PercentFormatter(1.0, decimals=0))
+    axd.set_ylabel("Drawdown", color=c["ink2"], fontsize=8)
+
+    axp.step(curve.index, curve["n_positions"], where="post", color=c["ink2"], linewidth=1)
+    axp.set_ylabel("Positions", color=c["ink2"], fontsize=8)
+    axp.yaxis.get_major_locator().set_params(integer=True)
+
+    fig.subplots_adjust(right=0.86)
+    if path is not None:
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(path, dpi=120, facecolor=fig.get_facecolor())
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+    return fig

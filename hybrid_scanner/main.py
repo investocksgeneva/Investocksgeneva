@@ -6,6 +6,10 @@ Quick start (from the repository root)::
     # Offline demo on deterministic synthetic data — no network needed
     python -m hybrid_scanner.main --source synthetic --recent 20 --backtest
 
+    # Portfolio-level backtest (shared capital, position & heat limits)
+    python -m hybrid_scanner.main --source synthetic --portfolio --plot \\
+        --set backtest.max_positions=5 --set backtest.signal_priority=tightest_stop
+
     # Real data (yfinance), default watchlist, today's signals
     python -m hybrid_scanner.main
 
@@ -126,6 +130,47 @@ def _fmt(df: pd.DataFrame) -> str:
         return df.to_string()
 
 
+def run_portfolio_backtest(gen, cfg, prepared, history, benchmark, export: bool, plot: bool):
+    """Run and print the portfolio-level backtest; optionally export/plot."""
+    from .portfolio import PortfolioBacktester
+
+    start = min(p.df.index[min(gen.warmup_bars, len(p.df) - 1)] for p in prepared.values())
+    res = PortfolioBacktester(cfg).run(prepared, history, benchmark, start)
+    bt = cfg.backtest
+    _print_header(f"Portfolio backtest  (max {bt.max_positions} positions, heat cap {bt.max_portfolio_heat_pct:.0%}, "
+                  f"{cfg.risk.risk_per_trade_pct:.2%} risk/trade, priority={bt.signal_priority})")
+    pct = {"total_return", "cagr", "ann_volatility", "max_drawdown", "time_in_market", "avg_gross_exposure",
+           "avg_heat", "max_heat", "win_rate", "benchmark_total_return", "benchmark_cagr", "benchmark_max_drawdown"}
+    for k, v in res.metrics.items():
+        if isinstance(v, float) and k in pct:
+            print(f"  {k:<26} {v:>10.2%}")
+        elif isinstance(v, float):
+            print(f"  {k:<26} {v:>10,.2f}")
+        else:
+            print(f"  {k:<26} {v:>10}")
+    if not res.skipped.empty:
+        print("  skipped signals by binding constraint:")
+        for reason, n in res.skipped["reason"].value_counts().items():
+            print(f"    {reason:<24} {n:>10}")
+    if cfg.data.source == "synthetic":
+        print("  (synthetic data — validates mechanics only, says nothing about real-market edge)")
+    out = Path(cfg.output.signals_csv).parent
+    if export:
+        out.mkdir(parents=True, exist_ok=True)
+        res.equity_curve.to_csv(out / "equity_curve.csv")
+        res.trades.to_csv(out / "portfolio_trades.csv", index=False)
+        res.skipped.to_csv(out / "portfolio_skipped.csv", index=False)
+        gen.log.info("Wrote equity_curve.csv, portfolio_trades.csv, portfolio_skipped.csv to %s", out)
+    if plot:
+        from .plotting import plot_equity
+
+        path = Path(cfg.output.plot_dir) / "portfolio_equity.png"
+        plot_equity(res.equity_curve, benchmark["close"] if benchmark is not None else None, path=path,
+                    title=f"Portfolio backtest — {len(prepared)} tickers, {cfg.data.timeframe}")
+        gen.log.info("Saved %s", path)
+    return res
+
+
 # --------------------------------------------------------------------------- #
 # CLI
 # --------------------------------------------------------------------------- #
@@ -153,6 +198,8 @@ def build_parser() -> argparse.ArgumentParser:
     g = ap.add_argument_group("output")
     g.add_argument("--recent", type=int, default=0, metavar="N", help="also list signals fired in the last N bars")
     g.add_argument("--backtest", action="store_true", help="simulate all historical signals and summarise in R")
+    g.add_argument("--portfolio", action="store_true",
+                   help="portfolio-level backtest: shared capital, max positions, heat cap, equity curve")
     g.add_argument("--export", action="store_true", help="write signals and rejections CSVs")
     g.add_argument("--plot", action="store_true", help="save a PNG of each signal's setup")
     g.add_argument("--notify", nargs="*", choices=["console", "discord", "telegram"], default=[])
@@ -223,7 +270,7 @@ def main(argv: list[str] | None = None) -> int:
 
     recent: list[EntrySignal] = []
     history: dict[str, list[EntrySignal]] = {}
-    if args.recent or args.backtest:
+    if args.recent or args.backtest or args.portfolio:
         for t, p in prepared.items():
             history[t] = gen.signal_history(p)
         if args.recent:
@@ -244,6 +291,9 @@ def main(argv: list[str] | None = None) -> int:
         if not trades.empty and args.export:
             Path(cfg.output.signals_csv).parent.mkdir(parents=True, exist_ok=True)
             trades.to_csv(Path(cfg.output.signals_csv).with_name("trades.csv"), index=False)
+
+    if args.portfolio:
+        run_portfolio_backtest(gen, cfg, prepared, history, benchmark, args.export, args.plot)
 
     to_alert = report.signals
     if args.export:

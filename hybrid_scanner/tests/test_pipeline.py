@@ -101,6 +101,8 @@ def test_hourly_timeframe_runs():
 def test_cli_end_to_end(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     rc = main(["--source", "synthetic", "--recent", "60", "--backtest", "--export", "--plot",
-               "--notify", "console", "discord", "--set", "risk.target_r_multiple=2.5"])
+               "--notify", "console", "discord", "--portfolio", "--set", "risk.target_r_multiple=2.5"])
     assert rc == 0
     assert (tmp_path / "output" / "rejections.csv").exists()
+    assert (tmp_path / "output" / "equity_curve.csv").exists()
+    assert (tmp_path / "output" / "plots" / "portfolio_equity.png").exists()

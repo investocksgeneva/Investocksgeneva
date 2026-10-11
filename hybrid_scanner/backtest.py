@@ -58,7 +58,9 @@ def simulate(df: pd.DataFrame, signals: list[EntrySignal], cfg: BacktestConfig) 
 
     for s in sorted(signals, key=lambda x: x.timestamp):
         t = int(idx.searchsorted(pd.Timestamp(s.timestamp)))
-        if t >= len(df) or (cfg.one_position_per_ticker and t <= busy_until):
+        # A signal on the exit bar itself is fine: we exited intrabar and can
+        # re-enter at the next open (matches the portfolio simulator).
+        if t >= len(df) or (cfg.one_position_per_ticker and t < busy_until):
             continue
         e = t + 1 if cfg.fill_next_open else t
         if e >= len(df):

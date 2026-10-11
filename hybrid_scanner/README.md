@@ -29,6 +29,10 @@ python -m hybrid_scanner.main --timeframe 1h --tickers NVDA AVGO META \
 # Full universe from a constituents CSV (symbol column); export and alert (dry run)
 python -m hybrid_scanner.main --watchlist sp500.csv --export --notify discord
 
+# Portfolio-level backtest: shared capital, 5 slots, rank competing signals
+python -m hybrid_scanner.main --source synthetic --portfolio --plot --export \
+    --set backtest.max_positions=5 --set backtest.signal_priority=tightest_stop
+
 # Inspect every rejection reason
 python -m hybrid_scanner.main --show-rejections -v
 
@@ -64,7 +68,8 @@ for s in report.signals:
 | `position_sizing.py` | Structure/ATR stops, noise floor, max-stop gate, targets, fixed-fractional sizing |
 | `signal_generator.py` | Orchestrates the stages. `scan()` (live) and `signal_history()` (research) share one code path |
 | `models.py` | `FilterCheck`, `StageResult`, `PullbackSetup` (dataclasses) and `EntrySignal` (validated pydantic model) |
-| `backtest.py` | Minimal R-based trade simulator for sanity-checking signal mechanics |
+| `backtest.py` | Per-ticker R-based trade simulator for sanity-checking signal mechanics |
+| `portfolio.py` | Portfolio backtest: one account, max positions, heat cap, buying power, signal ranking, compounding, equity curve and metrics vs benchmark |
 | `notifiers.py` | Console, CSV, Discord and Telegram sinks. Webhooks run in **dry-run** mode by default |
 | `plotting.py` | Setup chart for visual verification (candles, MAs, H/L/P, levels, pullback volume) |
 | `utils.py` | `DataProvider` protocol (yfinance / CSV / synthetic), OHLCV cleaning, watchlists, logging |
@@ -99,6 +104,44 @@ for s in report.signals:
 8. **Bars, not days.** Lookbacks are counted in bars. `for_timeframe("1h")`
    rescales only the calendar-meaning parameters (the 52-week window, per-bar
    volume floors, pullback depth).
+
+## Portfolio backtest
+
+The per-ticker simulator answers *"do the signals have edge, in R?"*. The
+portfolio backtester answers *"what does the account do when every signal
+competes for the same cash, slots and risk budget?"*
+
+Each bar runs in a fixed intraday order: **gap exits at the open → entries at
+the open → intrabar stop/target (stop first) → time stops at the close →
+mark-to-market.** Sizing uses the *previous close's* equity, and cash freed by
+an exit later in the day is never spent at that morning's open, so there is
+no look-ahead in compounding.
+
+| Parameter | Default | Meaning |
+|---|---|---|
+| `backtest.max_positions` | 10 | concurrent positions |
+| `backtest.max_portfolio_heat_pct` | 6% | total open initial risk ÷ equity |
+| `backtest.max_gross_exposure` | 1.0 | 1.0 = cash account; > 1 allows margin |
+| `backtest.signal_priority` | `rs_value` | tie-break when signals exceed capacity: `rs_value`, `rr_to_swing_high`, `tightest_stop`, `fifo` |
+| `backtest.compound` | true | size off current equity rather than starting capital |
+| `backtest.min_size_fraction` | 0.25 | skip, rather than take a token position, when heat or buying power shrinks a trade below this fraction |
+
+Outputs: `equity_curve.csv` (equity, cash, exposure, positions, heat per bar),
+`portfolio_trades.csv`, and `portfolio_skipped.csv`, which records the
+**binding constraint** for every signal not taken. Metrics include CAGR,
+volatility, Sharpe, Sortino, max drawdown and its duration, Calmar, time in
+market, average exposure and heat, and benchmark return / drawdown / beta /
+correlation.
+
+Validation: with every limit disabled, the portfolio engine reproduces the
+per-ticker simulator's R-multiples trade-for-trade. Final equity also
+reconciles exactly with the sum of trade P&L. Both checks are covered by tests.
+
+**Reading the results.** On a 20-name watchlist the strategy is typically flat
+most of the time (low time-in-market and exposure), so its CAGR understates
+the per-trade edge. Breadth is the lever: run it on a few hundred names. When
+comparing configurations, judge them on risk-adjusted metrics and on
+drawdown, not raw return.
 
 ## Key parameters (defaults)
 
@@ -143,6 +186,8 @@ re-run `prepare_universe` once per bar close rather than on every tick.
   statistically indistinguishable from zero.
 * **Survivorship bias.** Today's watchlist is made of yesterday's winners.
   Backtest on a point-in-time universe before believing any numbers.
+* **Sharpe ratios are noisy.** Over about two years of daily data, the standard
+  error of a Sharpe estimate is roughly ±0.7.
 * **OHLC ambiguity.** When a bar touches both stop and target, the simulator
   assumes the stop was hit first (conservative).
 * **RS rank** is only meaningful across a reasonably broad universe. Below
