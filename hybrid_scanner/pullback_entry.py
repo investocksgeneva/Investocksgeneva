@@ -44,6 +44,7 @@ class PullbackDetector:
         self.pb = pullback
         self.cf = confirmation
         self.atr_period = atr_period
+        self._cache: dict[tuple[int, int], tuple[pd.DataFrame, pd.DataFrame, dict[str, np.ndarray]]] = {}
 
     @property
     def ma_label(self) -> str:
@@ -75,12 +76,8 @@ class PullbackDetector:
         t = i if i >= 0 else n + i
         res = PullbackSetup(ticker=ticker, stage="pullback", passed=False, timestamp=df.index[t])
 
-        hi = df["high"].to_numpy(float)
-        lo = df["low"].to_numpy(float)
-        cl = df["close"].to_numpy(float)
-        vo = df["volume"].to_numpy(float)
-        ma = prep["pb_ma"].to_numpy(float)
-        atr = prep["atr"].to_numpy(float)
+        a = self._arrays(df, prep)
+        hi, lo, cl, vo, ma, atr = a["high"], a["low"], a["close"], a["volume"], a["pb_ma"], a["atr"]
 
         lb = pb.impulse_lookback
         if t < lb + pb.ma_slope_lookback or np.isnan(ma[t]) or np.isnan(atr[t]) or atr[t] <= 0:
@@ -143,7 +140,7 @@ class PullbackDetector:
 
         # --- Higher-low structure ---
         if pb.higher_low_check_enabled:
-            prior_low, src = self._prior_swing_low(prep, t, h)
+            prior_low, src = self._prior_swing_low(a, t, h)
             ref = prior_low if prior_low is not None else L
             res.checks.append(FilterCheck("higher_low_intact", bool(P > ref), float(P),
                                           f"> prior swing low {ref:.2f}", detail=src))
@@ -151,7 +148,7 @@ class PullbackDetector:
         structure_ok = all(c.passed is not False for c in res.checks)
 
         # --- Confirmation triggers ---
-        fired = [name for name in cf.triggers if self._trigger(name, t, h, df, prep)]
+        fired = [name for name in cf.triggers if self._trigger(name, t, h, a)]
         res.triggers_fired = fired
         missing_req = [r for r in cf.required_triggers if r not in fired]
         trig_ok = len(fired) >= cf.min_triggers and not missing_req
@@ -168,28 +165,47 @@ class PullbackDetector:
         return res
 
     # ------------------------------------------------------------------ #
+    def _arrays(self, df: pd.DataFrame, prep: pd.DataFrame) -> dict[str, np.ndarray]:
+        """NumPy views of every column, built once per (df, prep) pair.
+
+        Per-bar evaluation touches ~15 columns; going through pandas
+        ``__getitem__`` each time dominated runtime on large universes.
+        The cache keys on object identity and keeps a reference, so a
+        recycled ``id`` can never return stale arrays.
+        """
+        key = (id(df), id(prep))
+        hit = self._cache.get(key)
+        if hit is not None and hit[0] is df and hit[1] is prep:
+            return hit[2]
+        arrays = {c: df[c].to_numpy(float) for c in ("open", "high", "low", "close", "volume")}
+        arrays.update({c: prep[c].to_numpy(float) for c in prep.columns})
+        if len(self._cache) > 2048:
+            self._cache.clear()
+        self._cache[key] = (df, prep, arrays)
+        return arrays
+
     @staticmethod
-    def _prior_swing_low(prep: pd.DataFrame, t: int, h: int) -> tuple[float | None, str]:
+    def _prior_swing_low(a: dict[str, np.ndarray], t: int, h: int) -> tuple[float | None, str]:
         """Most recent swing low that (a) formed before the swing high and
         (b) was already *confirmed* by bar ``t`` — no future knowledge."""
-        bars = prep["pivot_low_bar"].to_numpy(float)[: t + 1]
-        prices = prep["pivot_low"].to_numpy(float)[: t + 1]
+        bars = a["pivot_low_bar"][: t + 1]
+        prices = a["pivot_low"][: t + 1]
         mask = ~np.isnan(bars) & (bars < h)
         if not mask.any():
             return None, "no confirmed pivot; using impulse low"
         k = np.flatnonzero(mask)[-1]
         return float(prices[k]), f"pivot @bar {int(bars[k])}"
 
-    def _trigger(self, name: str, t: int, h: int, df: pd.DataFrame, prep: pd.DataFrame) -> bool:
+    def _trigger(self, name: str, t: int, h: int, a: dict[str, np.ndarray]) -> bool:
         cf = self.cf
-        cl, hi, lo = df["close"].iat[t], df["high"].to_numpy(float), df["low"].iat[t]
-        ma, ma_prev = prep["pb_ma"].iat[t], prep["pb_ma"].iat[t - 1]
+        cl, hi, lo = a["close"][t], a["high"], a["low"][t]
+        ma, ma_prev = a["pb_ma"][t], a["pb_ma"][t - 1]
         if name == "bullish_engulfing":
-            return bool(prep["engulfing"].iat[t])
+            return bool(a["engulfing"][t])
         if name == "hammer":
-            return bool(prep["hammer"].iat[t])
+            return bool(a["hammer"][t])
         if name == "close_above_ma":
-            crossed = df["close"].iat[t - 1] <= ma_prev
+            crossed = a["close"][t - 1] <= ma_prev
             wick = cf.ma_reclaim_allow_wick and lo <= ma
             return bool(cl > ma and (crossed or wick))
         if name == "micro_high_break":
@@ -200,13 +216,13 @@ class PullbackDetector:
             px = cl if cf.micro_high_use_close else hi[t]
             return bool(px > ref)
         if name == "rsi_bounce":
-            r = prep["rsi"].to_numpy(float)
+            r = a["rsi"]
             if t - 1 <= h:
                 return False
             touched = np.nanmin(r[h + 1 : t]) <= cf.rsi_oversold
             return bool(touched and r[t] > cf.rsi_oversold and r[t] > r[t - 1])
         if name == "stoch_bounce":
-            k, d = prep["stoch_k"].to_numpy(float), prep["stoch_d"].to_numpy(float)
+            k, d = a["stoch_k"], a["stoch_d"]
             touched = np.nanmin(k[h + 1 : t + 1]) <= cf.stoch_oversold
             return bool(touched and k[t] > d[t] and k[t - 1] <= d[t - 1])
         raise ValueError(f"Unknown trigger {name!r}")

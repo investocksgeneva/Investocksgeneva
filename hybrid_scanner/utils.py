@@ -216,14 +216,78 @@ class SyntheticProvider:
         return normalize_ohlcv(df, ticker)
 
 
+class CachedProvider:
+    """Disk cache in front of any provider.
+
+    For a 500-name universe this turns a multi-minute, rate-limited download
+    into a sub-second load on repeat runs, and freezes the exact data a
+    result was produced from (reproducibility). Files older than
+    ``max_age_hours`` are refetched; ``refresh=True`` forces a refetch.
+    """
+
+    def __init__(self, inner: DataProvider, cache_dir: str | Path, max_age_hours: float = 12.0,
+                 refresh: bool = False) -> None:
+        self.inner = inner
+        self.dir = Path(cache_dir)
+        self.max_age_s = max_age_hours * 3600.0
+        self.refresh = refresh
+
+    def _path(self, ticker: str, timeframe: str, period: str) -> Path:
+        return self.dir / f"{ticker}_{timeframe}_{period}.csv"
+
+    def _load(self, path: Path) -> pd.DataFrame | None:
+        import time
+
+        if self.refresh or not path.exists() or time.time() - path.stat().st_mtime > self.max_age_s:
+            return None
+        df = pd.read_csv(path, index_col=0, parse_dates=True)
+        return normalize_ohlcv(df, path.stem)
+
+    def _store(self, path: Path, df: pd.DataFrame) -> None:
+        self.dir.mkdir(parents=True, exist_ok=True)
+        df.to_csv(path)
+
+    def get_history(self, ticker: str, timeframe: str, period: str) -> pd.DataFrame:
+        return self.get_many([ticker], timeframe, period)[ticker]
+
+    def get_many(self, tickers: Iterable[str], timeframe: str, period: str) -> dict[str, pd.DataFrame]:
+        out: dict[str, pd.DataFrame] = {}
+        missing: list[str] = []
+        for t in tickers:
+            cached = self._load(self._path(t, timeframe, period))
+            if cached is None:
+                missing.append(t)
+            else:
+                out[t] = cached
+        if missing:
+            log.info("cache: %d hits, fetching %d from %s", len(out), len(missing), type(self.inner).__name__)
+            if hasattr(self.inner, "get_many"):
+                fetched = self.inner.get_many(missing, timeframe, period)  # type: ignore[attr-defined]
+            else:
+                fetched = {}
+                for t in missing:
+                    try:
+                        fetched[t] = self.inner.get_history(t, timeframe, period)
+                    except Exception as exc:
+                        log.warning("fetch: %s — %s", t, exc)
+            for t, df in fetched.items():
+                self._store(self._path(t, timeframe, period), df)
+                out[t] = df
+        return out
+
+
 def make_provider(cfg: DataConfig) -> DataProvider:
     if cfg.source == "yfinance":
-        return YFinanceProvider()
-    if cfg.source == "csv":
+        inner: DataProvider = YFinanceProvider()
+    elif cfg.source == "csv":
         return CSVProvider(cfg.csv_dir)
-    if cfg.source == "synthetic":
+    elif cfg.source == "synthetic":
         return SyntheticProvider()
-    raise ValueError(f"Unknown data source {cfg.source!r}")
+    else:
+        raise ValueError(f"Unknown data source {cfg.source!r}")
+    if cfg.cache_dir:
+        return CachedProvider(inner, cfg.cache_dir, cfg.cache_max_age_hours, cfg.refresh_cache)
+    return inner
 
 
 def load_universe(

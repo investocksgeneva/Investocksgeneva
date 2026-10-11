@@ -106,3 +106,32 @@ def test_cli_end_to_end(tmp_path, monkeypatch):
     assert (tmp_path / "output" / "rejections.csv").exists()
     assert (tmp_path / "output" / "equity_curve.csv").exists()
     assert (tmp_path / "output" / "plots" / "portfolio_equity.png").exists()
+
+
+def test_cached_provider_fetches_once(tmp_path):
+    from hybrid_scanner.utils import CachedProvider, SyntheticProvider
+
+    class Counting(SyntheticProvider):
+        calls = 0
+
+        def get_history(self, ticker, timeframe="1d", period=""):
+            Counting.calls += 1
+            return super().get_history(ticker, timeframe, period)
+
+    cp = CachedProvider(Counting(n_bars=300), tmp_path)
+    first = cp.get_many(["AAA", "BBB"], "1d", "2y")
+    second = cp.get_many(["AAA", "BBB"], "1d", "2y")
+    assert Counting.calls == 2
+    for t in ("AAA", "BBB"):
+        pd.testing.assert_frame_equal(first[t], second[t], check_freq=False, atol=1e-9)
+    CachedProvider(Counting(n_bars=300), tmp_path, refresh=True).get_many(["AAA"], "1d", "2y")
+    assert Counting.calls == 3
+
+
+def test_sp500_universe_file():
+    from pathlib import Path
+
+    from hybrid_scanner.utils import read_watchlist
+
+    tickers = read_watchlist(Path(__file__).parents[1] / "universes" / "sp500.csv")
+    assert len(tickers) > 490 and "BRK-B" in tickers and "AAPL" in tickers

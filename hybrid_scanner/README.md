@@ -26,7 +26,10 @@ python -m hybrid_scanner.main
 python -m hybrid_scanner.main --timeframe 1h --tickers NVDA AVGO META \
     --risk 0.005 --set momentum.high_proximity.max_distance_pct=0.15
 
-# Full universe from a constituents CSV (symbol column); export and alert (dry run)
+# Built-in S&P 500 universe (see "Running on the S&P 500")
+python -m hybrid_scanner.main --universe sp500 --period 5y --portfolio --plot
+
+# Any constituents CSV (symbol column); export and alert (dry run)
 python -m hybrid_scanner.main --watchlist sp500.csv --export --notify discord
 
 # Portfolio-level backtest: shared capital, 5 slots, rank competing signals
@@ -104,6 +107,30 @@ for s in report.signals:
 8. **Bars, not days.** Lookbacks are counted in bars. `for_timeframe("1h")`
    rescales only the calendar-meaning parameters (the 52-week window, per-bar
    volume floors, pullback depth).
+
+## Running on the S&P 500
+
+```bash
+# First run downloads ~503 tickers via yfinance (a few minutes) into data/cache/;
+# re-runs within 12 h load from disk in seconds. --refresh forces a re-download.
+python -m hybrid_scanner.main --universe sp500 --period 5y --portfolio --plot --export
+```
+
+* **Use `--period 5y` (or longer) for backtests.** The 200-SMA plus its slope
+  window consumes about 10 months of warm-up, so `2y` leaves only around 14
+  months of tradeable history.
+* **Expect buying power to bind before position slots.** With
+  `risk.max_position_pct=0.25`, a cash account is full after about four
+  positions, so the 10-slot and 6%-heat limits never bind. Check
+  `portfolio_skipped.csv`. If `buying_power` dominates, try
+  `--set risk.max_position_pct=0.10`, which gives more, smaller positions and
+  lets heat and slots do their job.
+* **Survivorship bias.** `universes/sp500.csv` holds *today's* constituents
+  (source: github.com/datasets/s-and-p-500-companies). Back-testing today's
+  members over past years flatters results, because the losers that were
+  removed are missing. For research-grade numbers, use point-in-time
+  membership.
+* Runtime for 503 names × 5 years is about 30–60 s once the data is cached.
 
 ## Portfolio backtest
 

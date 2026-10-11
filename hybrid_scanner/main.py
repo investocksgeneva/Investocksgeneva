@@ -184,6 +184,9 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--source", choices=["yfinance", "csv", "synthetic"], default=None)
     g.add_argument("--csv-dir", help="directory for --source csv")
     g.add_argument("--benchmark", help="benchmark ticker (default SPY)")
+    g.add_argument("--universe", choices=["sp500"], help="built-in universe (constituents CSV shipped in universes/)")
+    g.add_argument("--period", help="history to load, e.g. 2y, 5y, max (yfinance period string)")
+    g.add_argument("--refresh", action="store_true", help="ignore the local price cache and re-download")
     g.add_argument("--as-of", help="evaluate as of this date/time instead of the latest bar")
 
     g = ap.add_argument_group("parameters")
@@ -219,6 +222,10 @@ def build_config(args: argparse.Namespace) -> ScannerConfig:
     overrides: dict[str, str] = {}
     if args.source:
         overrides["data.source"] = args.source
+    if args.period:
+        overrides["data.period"] = args.period
+    if args.refresh:
+        overrides["data.refresh_cache"] = "true"
     if args.csv_dir:
         overrides["data.csv_dir"] = args.csv_dir
     if args.benchmark:
@@ -250,7 +257,13 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     log = get_logger(level=cfg.output.log_level)
 
-    tickers = read_watchlist(args.watchlist) if args.watchlist else (args.tickers or list(DEFAULT_WATCHLIST))
+    if args.universe:
+        tickers = read_watchlist(Path(__file__).parent / "universes" / f"{args.universe}.csv")
+    elif args.watchlist:
+        tickers = read_watchlist(args.watchlist)
+    else:
+        tickers = args.tickers or list(DEFAULT_WATCHLIST)
+    log.info("Universe: %d tickers", len(tickers))
     provider = make_provider(cfg.data)
     dc = cfg.data
     data, errors = load_universe(provider, tickers, dc.timeframe, dc.period, dc.min_bars)

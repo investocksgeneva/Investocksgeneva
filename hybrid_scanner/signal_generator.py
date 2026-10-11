@@ -241,12 +241,27 @@ class HybridSignalGenerator:
         """
         start = self.warmup_bars if start is None else max(start, 0)
         passed = p.momentum["momentum_pass"].to_numpy()
+        dedupe = self.cfg.pullback.one_signal_per_pullback
         out: list[EntrySignal] = []
-        for i in range(start, len(p.df)):
-            if passed[i]:
-                d = self.signal_at(p, i)
-                if d.signal is not None:
-                    out.append(d.signal)
+        # Sequential equivalent of the live de-duplication: remember which
+        # swing highs already produced a (pre-dedupe) signal instead of
+        # re-evaluating earlier bars recursively — O(n) instead of O(n·k).
+        # Scanning begins max_pullback_bars early so pullbacks straddling
+        # `start` are de-duplicated exactly as the live scanner would.
+        signalled_highs: set[int] = set()
+        scan_from = max(0, start - self.cfg.pullback.max_pullback_bars) if dedupe else start
+        for i in range(scan_from, len(p.df)):
+            if not passed[i]:
+                continue
+            d = self.signal_at(p, i, dedupe=False)
+            if d.signal is None:
+                continue
+            h = d.pullback.swing_high_bar  # type: ignore[union-attr]
+            if dedupe and h in signalled_highs:
+                continue
+            signalled_highs.add(h)
+            if i >= start:
+                out.append(d.signal)
         return out
 
     # ------------------------------------------------------------------ #

@@ -222,3 +222,4 @@ __marimo__/
 
 # hybrid_scanner outputs
 output/
+data/cache/

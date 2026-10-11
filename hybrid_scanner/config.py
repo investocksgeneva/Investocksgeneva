@@ -67,6 +67,11 @@ class DataConfig:
     #: Trading-session bars per day. Used only to rescale calendar-based
     #: parameters for intraday timeframes (US RTH on Yahoo 1h = 7 bars).
     bars_per_day: int = 1
+    #: Local cache for downloaded history ("" disables). Re-runs on a
+    #: 500-name universe load from disk instead of re-downloading.
+    cache_dir: str = "data/cache"
+    cache_max_age_hours: float = 12.0
+    refresh_cache: bool = False
 
 
 # --------------------------------------------------------------------------- #
