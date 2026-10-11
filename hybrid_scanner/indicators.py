@@ -339,4 +339,7 @@ def higher_timeframe_trend(df: pd.DataFrame, rule: str, ma_period: int, require_
     ok = ok & htf_ma.notna()
     ok.index = pd.DatetimeIndex(htf["_ts"])
     ok = ok[~ok.index.duplicated(keep="last")]
-    return ok.reindex(df.index, method="ffill").fillna(False).astype(bool)
+    # Carry the flag as float through the reindex: reindexing a bool Series
+    # introduces NaN (object dtype), and fillna on object relies on pandas'
+    # deprecated silent downcasting.
+    return ok.astype(float).reindex(df.index, method="ffill").fillna(0.0).astype(bool)
