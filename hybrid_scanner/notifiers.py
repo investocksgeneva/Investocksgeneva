@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import json
 import os
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Protocol, Sequence
@@ -66,32 +68,101 @@ class CSVExporter:
 
 
 class _WebhookNotifier:
-    def __init__(self, dry_run: bool = True, timeout: float = 10.0) -> None:
+    #: Discord's edge rejects urllib's default User-Agent (HTTP 403, error 1010).
+    USER_AGENT = "hybrid-scanner/0.1 (+https://github.com/investocksgeneva/Investocksgeneva)"
+
+    def __init__(self, dry_run: bool = True, timeout: float = 10.0, max_retries: int = 3) -> None:
         self.dry_run = dry_run
         self.timeout = timeout
+        self.max_retries = max_retries
+        self.failures = 0
+        #: Every payload sent (or that would be sent in dry-run) — for tests/auditing.
+        self.payloads: list[dict] = []
 
-    def _post(self, url: str, payload: dict) -> None:
+    @property
+    def ok(self) -> bool:
+        return self.failures == 0
+
+    def _post(self, url: str, payload: dict) -> bool:
+        """POST JSON; honour HTTP 429 ``retry_after``. Never raises — alerting
+        must not crash a scan — but counts failures so callers can exit non-zero."""
+        self.payloads.append(payload)
         if self.dry_run:
             log.info("[dry-run] %s payload: %s", type(self).__name__, json.dumps(payload)[:300])
-            return
-        req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
-        try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # noqa: S310 (URL from env)
-                log.info("%s: HTTP %s", type(self).__name__, resp.status)
-        except Exception as exc:  # alerting must never crash the scanner
-            log.error("%s failed: %s", type(self).__name__, exc)
+            return True
+        body = json.dumps(payload).encode()
+        headers = {"Content-Type": "application/json", "User-Agent": self.USER_AGENT}
+        for attempt in range(self.max_retries + 1):
+            req = urllib.request.Request(url, data=body, headers=headers)
+            try:
+                with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # noqa: S310 (URL from env)
+                    log.info("%s: HTTP %s", type(self).__name__, resp.status)
+                    return True
+            except urllib.error.HTTPError as exc:
+                if exc.code == 429 and attempt < self.max_retries:
+                    wait = _retry_after(exc)
+                    log.warning("%s: rate limited, retrying in %.1fs", type(self).__name__, wait)
+                    time.sleep(wait)
+                    continue
+                log.error("%s failed: HTTP %s %s", type(self).__name__, exc.code, exc.reason)
+            except Exception as exc:  # network errors, timeouts
+                log.error("%s failed: %s", type(self).__name__, exc)
+            break
+        self.failures += 1
+        return False
+
+
+def _retry_after(exc: urllib.error.HTTPError) -> float:
+    try:
+        return min(float(json.loads(exc.read().decode() or "{}").get("retry_after", 1.0)), 60.0)
+    except (ValueError, AttributeError):
+        return 1.0
 
 
 class DiscordNotifier(_WebhookNotifier):
-    def __init__(self, webhook_env: str = "DISCORD_WEBHOOK_URL", **kw) -> None:
+    """Posts a header plus signals batched into as few messages as fit.
+
+    Batching keeps a busy S&P 500 week to a handful of requests (Discord
+    allows ~5 webhook calls per 2 s). ``allowed_mentions`` is empty so a
+    ticker or reason string can never ping ``@everyone``.
+    """
+
+    LIMIT = 1900  # Discord hard cap is 2000 characters per message
+
+    def __init__(self, webhook_env: str = "DISCORD_WEBHOOK_URL", header: str | None = None,
+                 pause: float = 0.5, **kw) -> None:
         super().__init__(**kw)
         self.url = os.environ.get(webhook_env, "")
+        self.header = header
+        self.pause = pause
         if not self.url and not self.dry_run:
-            raise ValueError(f"Set {webhook_env} to enable Discord alerts")
+            raise ValueError(f"Set the {webhook_env} environment variable to enable Discord alerts")
 
     def send(self, signals: Sequence[EntrySignal]) -> None:
-        for s in signals:
-            self._post(self.url, {"content": format_signal(s)[:1990]})  # Discord 2000-char cap
+        blocks = [format_signal(s)[: self.LIMIT] for s in signals]
+        if self.header:
+            blocks.insert(0, self.header[: self.LIMIT])
+        for i, message in enumerate(_pack(blocks, self.LIMIT)):
+            if i and not self.dry_run:
+                time.sleep(self.pause)
+            self._post(self.url, {"content": message, "allowed_mentions": {"parse": []}})
+
+
+def _pack(blocks: Sequence[str], limit: int, sep: str = "\n\n") -> list[str]:
+    """Greedily join blocks into messages no longer than ``limit``."""
+    out: list[str] = []
+    cur = ""
+    for b in blocks:
+        candidate = f"{cur}{sep}{b}" if cur else b
+        if len(candidate) <= limit:
+            cur = candidate
+        else:
+            if cur:
+                out.append(cur)
+            cur = b
+    if cur:
+        out.append(cur)
+    return out
 
 
 class TelegramNotifier(_WebhookNotifier):

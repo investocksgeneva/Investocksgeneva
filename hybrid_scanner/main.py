@@ -130,6 +130,49 @@ def _fmt(df: pd.DataFrame) -> str:
         return df.to_string()
 
 
+def signals_in_window(history: dict[str, list[EntrySignal]], prepared: dict, n_bars: int) -> list[EntrySignal]:
+    """Signals whose bar is among each ticker's last ``n_bars`` bars, newest first."""
+    out = []
+    for t, sigs in history.items():
+        idx = prepared[t].df.index
+        cutoff = len(idx) - n_bars
+        out.extend(s for s in sigs if idx.searchsorted(pd.Timestamp(s.timestamp)) >= cutoff)
+    return sorted(out, key=lambda s: s.timestamp, reverse=True)
+
+
+def _dedupe(signals: list[EntrySignal]) -> list[EntrySignal]:
+    seen: set[tuple[str, object]] = set()
+    out = []
+    for s in signals:
+        key = (s.ticker, s.timestamp)
+        if key not in seen:
+            seen.add(key)
+            out.append(s)
+    return out
+
+
+def alert_header(report: ScanReport, signals: list[EntrySignal], window: int, title: str, n_tickers: int) -> str:
+    """One-glance summary that leads every alert batch — posted even when
+    there are no signals, so a silent channel means a broken job, not a quiet week."""
+    as_of = pd.Timestamp(report.as_of).strftime("%Y-%m-%d") if report.as_of is not None else "n/a"
+    span = "latest bar" if window <= 1 else f"last {window} bars"
+    lines = [
+        f"**{title} — {as_of}**",
+        f"{n_tickers} tickers scanned · {len(report.momentum_candidates)} momentum candidates · "
+        f"{len(report.pending_setups)} pending setups · **{len(signals)} signal(s)** ({span})",
+    ]
+    if report.pending_setups:
+        names = ", ".join(sorted(p.ticker for p in report.pending_setups)[:20])
+        lines.append(f"Watch (pullback set up, awaiting trigger): {names}")
+    if report.errors:
+        lines.append(f"⚠️ {len(report.errors)} ticker(s) had data errors")
+    if signals:
+        lines.append("_Levels are as of each signal's bar — re-check price before acting. Not investment advice._")
+    else:
+        lines.append("No new entry signals.")
+    return "\n".join(lines)
+
+
 def run_portfolio_backtest(gen, cfg, prepared, history, benchmark, export: bool, plot: bool):
     """Run and print the portfolio-level backtest; optionally export/plot."""
     from .portfolio import PortfolioBacktester
@@ -207,6 +250,9 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--plot", action="store_true", help="save a PNG of each signal's setup")
     g.add_argument("--notify", nargs="*", choices=["console", "discord", "telegram"], default=[])
     g.add_argument("--live-alerts", action="store_true", help="actually POST webhooks (default: dry run)")
+    g.add_argument("--alert-window", type=int, default=1, metavar="N",
+                   help="alert/export signals from the last N bars, not just the latest (weekly job: 5)")
+    g.add_argument("--alert-title", default="Hybrid scan", help="title line of the alert header")
     g.add_argument("--show-rejections", action="store_true", help="print every rejection reason")
     g.add_argument("-v", "--verbose", action="store_true", help="debug logging (per-ticker decisions)")
     return ap
@@ -282,16 +328,16 @@ def main(argv: list[str] | None = None) -> int:
     print_report(report, args.show_rejections)
 
     recent: list[EntrySignal] = []
+    windowed: list[EntrySignal] = []
     history: dict[str, list[EntrySignal]] = {}
-    if args.recent or args.backtest or args.portfolio:
+    if args.recent or args.backtest or args.portfolio or args.alert_window > 1:
         for t, p in prepared.items():
             history[t] = gen.signal_history(p)
         if args.recent:
-            cutoff_i = {t: len(p.df) - args.recent for t, p in prepared.items()}
-            recent = [s for t, sigs in history.items() for s in sigs
-                      if prepared[t].df.index.searchsorted(pd.Timestamp(s.timestamp)) >= cutoff_i[t]]
-            recent.sort(key=lambda s: s.timestamp, reverse=True)
+            recent = signals_in_window(history, prepared, args.recent)
             print_signals(recent, f"Signals fired in the last {args.recent} bars  ({len(recent)})")
+        if args.alert_window > 1:
+            windowed = signals_in_window(history, prepared, args.alert_window)
 
     if args.backtest:
         trades = pd.concat([simulate(prepared[t].df, s, cfg.backtest) for t, s in history.items() if s] or [pd.DataFrame()])
@@ -308,25 +354,40 @@ def main(argv: list[str] | None = None) -> int:
     if args.portfolio:
         run_portfolio_backtest(gen, cfg, prepared, history, benchmark, args.export, args.plot)
 
-    to_alert = report.signals
+    # Alerts cover the latest bar, or every bar in --alert-window (a weekly
+    # job uses ~5 so Monday-Thursday signals aren't missed).
+    to_alert = windowed if args.alert_window > 1 else report.signals
     if args.export:
-        CSVExporter(cfg.output.signals_csv).send(to_alert + recent)
+        CSVExporter(cfg.output.signals_csv).send(_dedupe(to_alert + recent))
         export_rejections(rejections_frame(report), cfg.output.rejections_csv)
     dry = not args.live_alerts
-    for name in args.notify:
-        notifier = {"console": lambda: ConsoleNotifier(),
-                    "discord": lambda: DiscordNotifier(cfg.output.discord_webhook_env, dry_run=dry),
-                    "telegram": lambda: TelegramNotifier(cfg.output.telegram_token_env, cfg.output.telegram_chat_env, dry_run=dry)}[name]()
+    header = alert_header(report, to_alert, args.alert_window, args.alert_title, len(prepared))
+    notifiers = []
+    try:
+        for name in args.notify:
+            notifiers.append({
+                "console": lambda: ConsoleNotifier(),
+                "discord": lambda: DiscordNotifier(cfg.output.discord_webhook_env, header=header, dry_run=dry),
+                "telegram": lambda: TelegramNotifier(cfg.output.telegram_token_env, cfg.output.telegram_chat_env, dry_run=dry),
+            }[name]())
+    except ValueError as exc:  # missing webhook credentials
+        print(f"Alert configuration error: {exc}", file=sys.stderr)
+        return 2
+    for notifier in notifiers:
         notifier.send(to_alert)
+    failed = [type(n).__name__ for n in notifiers if not getattr(n, "ok", True)]
 
     if args.plot:
         from .plotting import plot_setup
 
         out = Path(cfg.output.plot_dir)
-        for s in to_alert + recent:
+        for s in _dedupe(to_alert + recent):
             path = out / f"{s.ticker}_{s.timestamp:%Y%m%d_%H%M}.png"
             plot_setup(prepared[s.ticker], s, path=path)
             log.info("Saved %s", path)
+    if failed:
+        print(f"Alert delivery failed: {', '.join(failed)}", file=sys.stderr)
+        return 3
     return 0
 
 
