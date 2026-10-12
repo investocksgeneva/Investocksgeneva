@@ -135,3 +135,67 @@ def test_sp500_universe_file():
 
     tickers = read_watchlist(Path(__file__).parents[1] / "universes" / "sp500.csv")
     assert len(tickers) > 490 and "BRK-B" in tickers and "AAPL" in tickers
+
+
+def _yf_frame(tickers, n=300):
+    """Mimic yfinance's group_by='ticker' MultiIndex layout."""
+    from hybrid_scanner.utils import SyntheticProvider
+
+    prov = SyntheticProvider(n_bars=n)
+    frames = {t: prov.get_history(t).rename(columns=str.title) for t in tickers}
+    return pd.concat(frames, axis=1)
+
+
+def test_yfinance_retries_failed_tickers_serially():
+    from hybrid_scanner.utils import YFinanceProvider
+
+    calls = []
+
+    def fake_download(tickers, threads, **kw):
+        calls.append((list(tickers), threads))
+        if threads:  # threaded pass: simulate the SQLite 'database is locked' drop-out
+            return _yf_frame([t for t in tickers if t != "CDNS"])
+        return _yf_frame(tickers)
+
+    prov = YFinanceProvider(download=fake_download)
+    out = prov.get_many(["AAPL", "CDNS", "MSFT"], "1d", "2y")
+    assert set(out) == {"AAPL", "CDNS", "MSFT"}
+    assert calls[-1] == (["CDNS"], False)  # only the failure retried, without threads
+
+
+def test_yfinance_gives_up_after_one_retry():
+    from hybrid_scanner.utils import YFinanceProvider
+
+    calls = []
+
+    def fake_download(tickers, threads, **kw):
+        calls.append(threads)
+        return _yf_frame([t for t in tickers if t != "GONE"])
+
+    out = YFinanceProvider(download=fake_download).get_many(["AAPL", "GONE"], "1d", "2y")
+    assert set(out) == {"AAPL"} and calls == [True, False]
+
+
+def test_yfinance_batch_exception_does_not_abort():
+    from hybrid_scanner.utils import YFinanceProvider
+
+    def boom(tickers, threads, **kw):
+        raise ConnectionError("network down")
+
+    assert YFinanceProvider(download=boom).get_many(["AAPL"], "1d", "2y") == {}
+
+
+def test_short_history_reported_separately():
+    from hybrid_scanner.utils import SyntheticProvider, load_universe
+
+    class Mixed(SyntheticProvider):
+        def get_history(self, ticker, timeframe="1d", period=""):
+            df = super().get_history(ticker, timeframe, period)
+            return df.iloc[-50:] if ticker == "NEWIPO" else df
+
+    short: dict[str, str] = {}
+    data, errors = load_universe(Mixed(n_bars=300), ["AAPL", "NEWIPO"], "1d", "2y", 260, short)
+    assert set(data) == {"AAPL"} and errors == {} and "NEWIPO" in short
+    # Without the sink, behaviour is unchanged (backward compatible).
+    data, errors = load_universe(Mixed(n_bars=300), ["AAPL", "NEWIPO"], "1d", "2y", 260)
+    assert "NEWIPO" in errors

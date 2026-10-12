@@ -101,8 +101,20 @@ def test_alert_header_contents():
                         errors={"XYZ": "no data"})
     h = alert_header(report, [_signal()], 5, "Weekly hybrid scan", 503)
     assert "Weekly hybrid scan — 2026-10-09" in h
-    assert "503 tickers" in h and "1 signal(s)" in h and "last 5 bars" in h and "data errors" in h
+    assert "503 tickers" in h and "1 signal(s)" in h and "last 5 bars" in h
+    assert "⚠️ 1 ticker(s) failed to load: XYZ" in h
     assert "No new entry signals" in alert_header(report, [], 1, "Scan", 10)
+
+
+def test_alert_header_separates_new_listings_from_errors():
+    report = ScanReport(as_of=datetime(2026, 10, 9), signals=[], momentum_candidates=[], rejections=[],
+                        short_history={"HONA": "82 bars < required 260", "VYLR": "7 bars < required 260"})
+    h = alert_header(report, [], 5, "Weekly hybrid scan", 503)
+    assert "⚠️" not in h and "failed to load" not in h
+    assert "Skipped (new listings, not enough history yet): HONA, VYLR" in h
+    many = ScanReport(as_of=datetime(2026, 10, 9), signals=[], momentum_candidates=[], rejections=[],
+                      short_history={f"T{i:02d}": "x" for i in range(13)})
+    assert "+3 more" in alert_header(many, [], 5, "Scan", 503)
 
 
 def test_cli_live_alert_without_secret_exits_2(monkeypatch, tmp_path):

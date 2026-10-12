@@ -124,3 +124,6 @@ class ScanReport:
     #: tomorrow's alert list.
     pending_setups: list[StageResult] = field(default_factory=list)
     errors: dict[str, str] = field(default_factory=dict)
+    #: Excluded for too little history (recent IPOs, spin-offs) — expected,
+    #: reported separately from genuine data errors.
+    short_history: dict[str, str] = field(default_factory=dict)

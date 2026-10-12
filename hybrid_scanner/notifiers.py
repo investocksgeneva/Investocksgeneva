@@ -12,6 +12,9 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -177,6 +180,60 @@ class TelegramNotifier(_WebhookNotifier):
         url = f"https://api.telegram.org/bot{self.token}/sendMessage"
         for s in signals:
             self._post(url, {"chat_id": self.chat_id, "text": format_signal(s), "parse_mode": "Markdown"})
+
+
+class MacNotifier:
+    """macOS notification-centre pop-up.
+
+    Uses ``terminal-notifier`` when installed (clicking the banner opens the
+    HTML report), otherwise the built-in ``osascript``. Text is passed as
+    AppleScript *arguments*, never spliced into the script source, so a
+    ticker or reason string can't break or inject AppleScript.
+
+    Off macOS it logs and does nothing (so the CLI works everywhere).
+    """
+
+    def __init__(self, title: str, message: str, subtitle: str = "", open_path: str | Path | None = None,
+                 runner=subprocess.run, platform: str | None = None) -> None:
+        self.title, self.message, self.subtitle = title, message, subtitle
+        self.open_path = Path(open_path).resolve() if open_path else None
+        self._run = runner
+        self.platform = platform or sys.platform
+        self.failures = 0
+        self.commands: list[list[str]] = []
+
+    @property
+    def ok(self) -> bool:
+        return self.failures == 0
+
+    def command(self) -> list[str]:
+        tn = shutil.which("terminal-notifier")
+        if tn:
+            cmd = [tn, "-title", self.title, "-message", self.message, "-group", "hybrid-scanner"]
+            if self.subtitle:
+                cmd += ["-subtitle", self.subtitle]
+            if self.open_path:
+                cmd += ["-open", self.open_path.as_uri()]
+            return cmd
+        script = ["on run argv",
+                  "display notification (item 1 of argv) with title (item 2 of argv) subtitle (item 3 of argv)",
+                  "end run"]
+        cmd = ["osascript"]
+        for line in script:
+            cmd += ["-e", line]
+        return cmd + [self.message, self.title, self.subtitle]
+
+    def send(self, signals: Sequence[EntrySignal]) -> None:
+        if self.platform != "darwin":
+            log.info("[macos notifier] not on macOS — would show: %s | %s | %s", self.title, self.message, self.subtitle)
+            return
+        cmd = self.command()
+        self.commands.append(cmd)
+        try:
+            self._run(cmd, check=True, capture_output=True, timeout=20)
+        except Exception as exc:  # missing binary, permission, timeout
+            log.error("macOS notification failed: %s", exc)
+            self.failures += 1
 
 
 def export_rejections(df: pd.DataFrame, path: str | Path) -> None:
