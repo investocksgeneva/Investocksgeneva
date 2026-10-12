@@ -131,6 +131,21 @@ python -m hybrid_scanner.main --universe sp500 --period 5y --portfolio --plot --
   membership.
 * Runtime for 503 names × 5 years is about 30–60 s once the data is cached.
 
+## Run it daily on your Mac
+
+A notification and an HTML report every weekday evening, with no cloud
+services or accounts. To set it up, follow **[mac/README.md](mac/README.md)**.
+In short, it is three commands:
+
+```bash
+cd ~ && git clone https://github.com/investocksgeneva/Investocksgeneva.git
+cd ~/Investocksgeneva && ./hybrid_scanner/mac/install.sh
+```
+
+The new CLI options also work on any OS: `--output-dir DIR`, `--report
+report.html` (a self-contained HTML report), `--state-file` (stay quiet on
+market holidays), and `--notify macos`.
+
 ## Weekly Discord scan (GitHub Actions)
 
 `.github/workflows/weekly-scan.yml` runs every **Friday at 22:23 UTC**, after

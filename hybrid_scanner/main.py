@@ -37,7 +37,7 @@ import pandas as pd
 from .backtest import simulate, summarize
 from .config import DEFAULT_WATCHLIST, ScannerConfig
 from .models import EntrySignal, ScanReport
-from .notifiers import ConsoleNotifier, CSVExporter, DiscordNotifier, TelegramNotifier, export_rejections
+from .notifiers import ConsoleNotifier, CSVExporter, DiscordNotifier, MacNotifier, TelegramNotifier, export_rejections
 from .signal_generator import HybridSignalGenerator, rejections_frame, signals_frame
 from .utils import get_logger, load_universe, make_provider, read_watchlist
 
@@ -257,11 +257,15 @@ def build_parser() -> argparse.ArgumentParser:
                    help="portfolio-level backtest: shared capital, max positions, heat cap, equity curve")
     g.add_argument("--export", action="store_true", help="write signals and rejections CSVs")
     g.add_argument("--plot", action="store_true", help="save a PNG of each signal's setup")
-    g.add_argument("--notify", nargs="*", choices=["console", "discord", "telegram"], default=[])
+    g.add_argument("--notify", nargs="*", choices=["console", "discord", "telegram", "macos"], default=[])
     g.add_argument("--live-alerts", action="store_true", help="actually POST webhooks (default: dry run)")
     g.add_argument("--alert-window", type=int, default=1, metavar="N",
                    help="alert/export signals from the last N bars, not just the latest (weekly job: 5)")
     g.add_argument("--alert-title", default="Hybrid scan", help="title line of the alert header")
+    g.add_argument("--output-dir", metavar="DIR", help="write CSVs and charts here instead of ./output")
+    g.add_argument("--report", metavar="PATH", help="write a self-contained HTML report (signals, charts, watch list)")
+    g.add_argument("--state-file", metavar="PATH",
+                   help="remember the last reported bar; if no new bar since (market holiday), exit quietly")
     g.add_argument("--show-rejections", action="store_true", help="print every rejection reason")
     g.add_argument("-v", "--verbose", action="store_true", help="debug logging (per-ticker decisions)")
     return ap
@@ -291,6 +295,11 @@ def build_config(args: argparse.Namespace) -> ScannerConfig:
         overrides["risk.risk_per_trade_pct"] = str(args.risk)
     if args.verbose:
         overrides["output.log_level"] = "DEBUG"
+    if args.output_dir:
+        out = Path(args.output_dir)
+        overrides["output.signals_csv"] = str(out / "signals.csv")
+        overrides["output.rejections_csv"] = str(out / "rejections.csv")
+        overrides["output.plot_dir"] = str(out / "plots")
     for item in args.set:
         if "=" not in item:
             raise SystemExit(f"--set expects PATH=VALUE, got {item!r}")
@@ -336,6 +345,14 @@ def main(argv: list[str] | None = None) -> int:
     report = gen.scan(data, benchmark, as_of=args.as_of, prepared=prepared)
     report.errors.update(errors)
     report.short_history.update(short_history)
+
+    # Holiday guard: no new bar since the last reported scan means no news.
+    bar_key = pd.Timestamp(report.as_of).isoformat() if report.as_of is not None else ""
+    state = Path(args.state_file) if args.state_file else None
+    if state is not None and state.exists() and state.read_text().strip() == bar_key:
+        print(f"No new market data since the last report ({bar_key}) — market holiday? Nothing to do.")
+        return 0
+
     print_report(report, args.show_rejections)
 
     recent: list[EntrySignal] = []
@@ -371,23 +388,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.export:
         CSVExporter(cfg.output.signals_csv).send(_dedupe(to_alert + recent))
         export_rejections(rejections_frame(report), cfg.output.rejections_csv)
-    dry = not args.live_alerts
-    header = alert_header(report, to_alert, args.alert_window, args.alert_title, len(prepared))
-    notifiers = []
-    try:
-        for name in args.notify:
-            notifiers.append({
-                "console": lambda: ConsoleNotifier(),
-                "discord": lambda: DiscordNotifier(cfg.output.discord_webhook_env, header=header, dry_run=dry),
-                "telegram": lambda: TelegramNotifier(cfg.output.telegram_token_env, cfg.output.telegram_chat_env, dry_run=dry),
-            }[name]())
-    except ValueError as exc:  # missing webhook credentials
-        print(f"Alert configuration error: {exc}", file=sys.stderr)
-        return 2
-    for notifier in notifiers:
-        notifier.send(to_alert)
-    failed = [type(n).__name__ for n in notifiers if not getattr(n, "ok", True)]
-
+    plots: dict[tuple[str, object], Path] = {}
     if args.plot:
         from .plotting import plot_setup
 
@@ -395,11 +396,53 @@ def main(argv: list[str] | None = None) -> int:
         for s in _dedupe(to_alert + recent):
             path = out / f"{s.ticker}_{s.timestamp:%Y%m%d_%H%M}.png"
             plot_setup(prepared[s.ticker], s, path=path)
+            plots[(s.ticker, s.timestamp)] = path
             log.info("Saved %s", path)
+
+    report_path = None
+    if args.report:
+        from .report import write_html_report
+
+        report_path = write_html_report(args.report, report, to_alert, title=args.alert_title,
+                                        n_tickers=len(prepared), window=args.alert_window, plots=plots)
+        log.info("Wrote report %s", report_path)
+
+    dry = not args.live_alerts
+    header = alert_header(report, to_alert, args.alert_window, args.alert_title, len(prepared))
+    notifiers = []
+    try:
+        for name in args.notify:
+            notifiers.append(_make_notifier(name, cfg, header, dry, report, to_alert, args.alert_title, report_path))
+    except ValueError as exc:  # missing webhook credentials
+        print(f"Alert configuration error: {exc}", file=sys.stderr)
+        return 2
+    for notifier in notifiers:
+        notifier.send(to_alert)
+    failed = [type(n).__name__ for n in notifiers if not getattr(n, "ok", True)]
+
     if failed:
         print(f"Alert delivery failed: {', '.join(failed)}", file=sys.stderr)
         return 3
+    if state is not None:  # only after a fully successful run
+        state.parent.mkdir(parents=True, exist_ok=True)
+        state.write_text(bar_key)
     return 0
+
+
+def _make_notifier(name, cfg, header, dry, report, signals, title, report_path):
+    if name == "console":
+        return ConsoleNotifier()
+    if name == "discord":
+        return DiscordNotifier(cfg.output.discord_webhook_env, header=header, dry_run=dry)
+    if name == "telegram":
+        return TelegramNotifier(cfg.output.telegram_token_env, cfg.output.telegram_chat_env, dry_run=dry)
+    if name == "macos":
+        from .report import summarize_for_notification
+
+        message, subtitle = summarize_for_notification(report, signals)
+        as_of = pd.Timestamp(report.as_of).strftime("%Y-%m-%d") if report.as_of is not None else ""
+        return MacNotifier(f"{title} — {as_of}", message, subtitle, open_path=report_path)
+    raise ValueError(f"unknown notifier {name!r}")
 
 
 if __name__ == "__main__":
