@@ -102,6 +102,11 @@ Each report shows:
   triggered yet;
 * all **momentum candidates**.
 
+**Scanning while the US market is open** (15:30–22:00 Geneva time) is safe.
+The scanner ignores today's unfinished candle and uses the last completed day.
+A hammer at 17:00 can look completely different by the close, so signals
+are only ever based on finished candles.
+
 **On US market holidays** there is no new data. The scan notices, stays
 silent and writes nothing.
 

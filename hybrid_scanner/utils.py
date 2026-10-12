@@ -12,7 +12,9 @@ from __future__ import annotations
 import logging
 import sys
 import zlib
+from datetime import datetime, time, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from typing import Iterable, Protocol, runtime_checkable
 
 import numpy as np
@@ -43,6 +45,45 @@ def get_logger(name: str = "hybrid_scanner", level: str | int = "INFO") -> loggi
 
 
 log = get_logger()
+
+
+# --------------------------------------------------------------------------- #
+# US market session
+# --------------------------------------------------------------------------- #
+NEW_YORK = ZoneInfo("America/New_York")
+#: Daily bars are treated as final this long after the 16:00 ET close, giving
+#: the data vendor time to publish the official closing prints.
+DAILY_BAR_FINAL_AT = time(16, 30)
+
+
+def _now_ny(now: datetime | None = None) -> datetime:
+    now = now or datetime.now(tz=NEW_YORK)
+    return now.astimezone(NEW_YORK) if now.tzinfo else now.replace(tzinfo=NEW_YORK)
+
+
+def last_daily_close(now: datetime | None = None) -> datetime:
+    """Most recent moment a US daily bar became final (16:30 ET), as an aware
+    datetime. Weekends/holidays just point at an earlier, still-valid cutoff."""
+    ny = _now_ny(now)
+    cutoff = ny.replace(hour=DAILY_BAR_FINAL_AT.hour, minute=DAILY_BAR_FINAL_AT.minute, second=0, microsecond=0)
+    return cutoff if ny >= cutoff else cutoff - timedelta(days=1)
+
+
+def drop_incomplete_daily_bar(df: pd.DataFrame, now: datetime | None = None) -> pd.DataFrame:
+    """Drop today's still-forming daily bar while the US session is open.
+
+    Yahoo serves a "today" daily bar from the first trade of the session. A
+    hammer or engulfing candle read at 11:00 New York time can be gone by the
+    close, so signals must only ever see completed bars — live and in
+    backtests alike. Before 16:30 ET, a last bar dated today is removed.
+    """
+    if df.empty:
+        return df
+    ny = _now_ny(now)
+    last = pd.Timestamp(df.index[-1])
+    if last.date() == ny.date() and ny.time() < DAILY_BAR_FINAL_AT:
+        return df.iloc[:-1]
+    return df
 
 
 # --------------------------------------------------------------------------- #
@@ -268,9 +309,16 @@ class CachedProvider:
         return self.dir / f"{ticker}_{timeframe}_{period}.csv"
 
     def _load(self, path: Path) -> pd.DataFrame | None:
-        import time
+        import time as _time
 
-        if self.refresh or not path.exists() or time.time() - path.stat().st_mtime > self.max_age_s:
+        if self.refresh or not path.exists():
+            return None
+        mtime = path.stat().st_mtime
+        if _time.time() - mtime > self.max_age_s:
+            return None
+        # A file saved before the latest US close may hold a still-forming
+        # bar from mid-session; refetch so the final close is used.
+        if mtime < last_daily_close().timestamp():
             return None
         df = pd.read_csv(path, index_col=0, parse_dates=True)
         return normalize_ohlcv(df, path.stem)

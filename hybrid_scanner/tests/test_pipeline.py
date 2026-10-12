@@ -199,3 +199,64 @@ def test_short_history_reported_separately():
     # Without the sink, behaviour is unchanged (backward compatible).
     data, errors = load_universe(Mixed(n_bars=300), ["AAPL", "NEWIPO"], "1d", "2y", 260)
     assert "NEWIPO" in errors
+
+
+# --- unfinished daily bar (US session still open) ----------------------------
+def _bars(last_day):
+    idx = pd.date_range(end=last_day, periods=5, freq="B")
+    return pd.DataFrame({"open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "volume": 1.0}, index=idx)
+
+
+def test_drop_incomplete_bar_during_session():
+    from datetime import datetime
+
+    from hybrid_scanner.utils import NEW_YORK, drop_incomplete_daily_bar
+
+    df = _bars("2026-10-12")  # Monday
+    mid_session = datetime(2026, 10, 12, 11, 0, tzinfo=NEW_YORK)
+    after_close = datetime(2026, 10, 12, 16, 45, tzinfo=NEW_YORK)
+    next_morning = datetime(2026, 10, 13, 2, 0, tzinfo=NEW_YORK)
+    assert drop_incomplete_daily_bar(df, mid_session).index[-1] == pd.Timestamp("2026-10-09")
+    assert len(drop_incomplete_daily_bar(df, after_close)) == 5
+    assert len(drop_incomplete_daily_bar(df, next_morning)) == 5
+    # Geneva wall-clock input is converted: 17:00 CEST = 11:00 New York → still open.
+    from zoneinfo import ZoneInfo
+
+    geneva = datetime(2026, 10, 12, 17, 0, tzinfo=ZoneInfo("Europe/Zurich"))
+    assert len(drop_incomplete_daily_bar(df, geneva)) == 4
+
+
+def test_last_daily_close_cutoff():
+    from datetime import datetime
+
+    from hybrid_scanner.utils import NEW_YORK, last_daily_close
+
+    assert last_daily_close(datetime(2026, 10, 12, 11, 0, tzinfo=NEW_YORK)) == datetime(2026, 10, 11, 16, 30, tzinfo=NEW_YORK)
+    assert last_daily_close(datetime(2026, 10, 12, 17, 0, tzinfo=NEW_YORK)) == datetime(2026, 10, 12, 16, 30, tzinfo=NEW_YORK)
+
+
+def test_cache_saved_mid_session_is_refetched_after_close(tmp_path, monkeypatch):
+    import os
+    import time as _time
+    from datetime import datetime
+
+    from hybrid_scanner import utils
+    from hybrid_scanner.utils import NEW_YORK, CachedProvider, SyntheticProvider
+
+    class Counting(SyntheticProvider):
+        calls = 0
+
+        def get_history(self, ticker, timeframe="1d", period=""):
+            Counting.calls += 1
+            return super().get_history(ticker, timeframe, period)
+
+    cp = CachedProvider(Counting(n_bars=300), tmp_path)
+    cp.get_many(["AAA"], "1d", "2y")
+    # Pretend the file was written at 11:00 NY today and it's now 17:00 NY.
+    saved = datetime(2026, 10, 12, 11, 0, tzinfo=NEW_YORK).timestamp()
+    for f in tmp_path.iterdir():
+        os.utime(f, (saved, saved))
+    monkeypatch.setattr(utils, "last_daily_close", lambda now=None: datetime(2026, 10, 12, 16, 30, tzinfo=NEW_YORK))
+    monkeypatch.setattr(_time, "time", lambda: datetime(2026, 10, 12, 17, 0, tzinfo=NEW_YORK).timestamp())
+    cp.get_many(["AAA"], "1d", "2y")
+    assert Counting.calls == 2  # refetched, not served from the mid-session cache
