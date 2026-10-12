@@ -146,19 +146,19 @@ The new CLI options also work on any OS: `--output-dir DIR`, `--report
 report.html` (a self-contained HTML report), `--state-file` (stay quiet on
 market holidays), and `--notify macos`.
 
-## Weekly Discord scan (GitHub Actions)
+## Discord scan on GitHub Actions (manual)
 
-`.github/workflows/weekly-scan.yml` runs every **Friday at 22:23 UTC**, after
-the US close. It scans the S&P 500 on real Yahoo data and posts to Discord:
-a header (candidates, pending setups to watch, data errors) followed by
-every signal from the **last 5 daily bars**, so the whole week's signals
-are covered.
+`.github/workflows/weekly-scan.yml` runs the scan on GitHub's servers on real
+Yahoo data and posts to Discord: a header (candidates, pending setups to
+watch, data errors) followed by every signal from the last 5 daily bars.
+It is **manual-only**. The scheduled daily scan runs on your Mac (see above).
+The workflow file explains how to restore the Friday schedule.
 
 1. In Discord, open **Channel settings → Integrations → Webhooks → New
    Webhook → Copy Webhook URL**.
 2. In GitHub, go to **Settings → Secrets and variables → Actions → New
    repository secret**, name it `DISCORD_WEBHOOK_URL`, and paste the URL.
-3. Test it: **Actions → Weekly hybrid scan → Run workflow**. Tick *dry run*
+3. Run it: **Actions → Weekly hybrid scan → Run workflow**. Tick *dry run*
    to log the payload without posting. You can also give a few tickers for a
    faster run.
 
@@ -174,8 +174,8 @@ Behaviour worth knowing:
   persistent 429 makes the run fail, so GitHub emails you.
 * **Charts and CSVs are kept.** Signal charts and CSVs are uploaded as a run
   artifact and kept for 30 days.
-* **Schedules only run from the default branch.** GitHub also pauses
-  scheduled workflows after 60 days without repository activity.
+* **If you restore the schedule:** schedules only run from the default
+  branch, and GitHub pauses them after 60 days without repository activity.
 
 Locally, the same thing is
 `python -m hybrid_scanner.main --universe sp500 --alert-window 5 --notify discord`

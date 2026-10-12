@@ -1,21 +1,17 @@
 name: Weekly hybrid scan
 
-# Runs the scanner on real Yahoo data every Friday after the US close and
-# posts the week's entry signals to Discord.
+# Manual-only: runs the scanner on real Yahoo data and posts the signals to
+# Discord. Start it from Actions → Weekly hybrid scan → Run workflow.
 #
-# Setup (once): Settings → Secrets and variables → Actions → New repository
-# secret, name DISCORD_WEBHOOK_URL, value = the channel's webhook URL
-# (Discord: Channel settings → Integrations → Webhooks → Copy URL).
+# The daily scan now runs locally on a Mac (hybrid_scanner/mac/), so the
+# Friday schedule is switched off. To turn it back on, restore under `on:`
+#   schedule:
+#     - cron: "23 22 * * 5"   # Fridays 22:23 UTC, after the US close
 #
-# Note: scheduled workflows only run from the default branch, and GitHub
-# pauses them after 60 days without repository activity.
+# Posting needs a repository secret DISCORD_WEBHOOK_URL (Settings → Secrets
+# and variables → Actions); a dry run doesn't.
 
 on:
-  schedule:
-    # Fridays 22:23 UTC = 18:23 New York in summer, 17:23 in winter — after
-    # the 16:00 close in both, so Friday's daily bar is final. Off the hour
-    # to dodge GitHub's top-of-hour scheduling backlog.
-    - cron: "23 22 * * 5"
   workflow_dispatch:
     inputs:
       tickers:
