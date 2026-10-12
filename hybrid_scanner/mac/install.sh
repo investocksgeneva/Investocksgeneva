@@ -100,6 +100,84 @@ fi
 chmod +x "$REPO/hybrid_scanner/mac/"*.sh
 
 # --------------------------------------------------------------------------- #
+step "Adding double-click shortcuts to $HOME_DIR"
+Q_REPO="$(printf '%q' "$REPO")"
+Q_HOME="$(printf '%q' "$HOME_DIR")"
+shortcut() {  # shortcut "File name" <<'BODY' — body is bash; REPO/HYBRID_HOME pre-set, quoted
+  local f="$HOME_DIR/$1.command"
+  { echo '#!/bin/bash'; echo "REPO=$Q_REPO"; echo "HYBRID_HOME=$Q_HOME"; echo "export HYBRID_HOME"; cat; } >"$f"
+  chmod +x "$f"
+}
+shortcut "Run scan now" <<'BODY'
+# Double-click to scan the S&P 500 now (about 2 minutes), then open the report.
+"$REPO/hybrid_scanner/mac/run_scan.sh"
+rc=$?
+[ -f "$HYBRID_HOME/latest-report.html" ] && open "$HYBRID_HOME/latest-report.html"
+echo
+read -n 1 -s -r -p "Finished. Press any key to close this window."
+exit $rc
+BODY
+shortcut "Open latest report" <<'BODY'
+# Double-click to open the most recent scan report in your browser.
+if [ -f "$HYBRID_HOME/latest-report.html" ]; then
+  open "$HYBRID_HOME/latest-report.html"
+else
+  echo "No report yet — double-click 'Run scan now' first."
+  read -n 1 -s -r -p "Press any key to close this window."
+fi
+BODY
+shortcut "Edit settings" <<'BODY'
+# Double-click to change account size, risk per trade and other options.
+open -e "$HYBRID_HOME/settings.env"
+BODY
+shortcut "Update scanner" <<'BODY'
+# Double-click to download the latest version of the scanner and reinstall.
+cd "$REPO" || exit 1
+git pull --ff-only && ./hybrid_scanner/mac/install.sh --no-test
+echo
+read -n 1 -s -r -p "Finished. Press any key to close this window."
+BODY
+cat >"$HOME_DIR/HOW TO USE.txt" <<GUIDE
+HYBRID SCANNER — QUICK GUIDE
+============================
+
+The scan runs automatically Monday–Friday at $(printf '%02d:%02d' "$SCAN_HOUR" "$SCAN_MINUTE")
+(or as soon as the Mac wakes up, if it was asleep). A notification appears when it finishes.
+
+DOUBLE-CLICK SHORTCUTS (in this folder)
+  Run scan now.command        scan the S&P 500 now (~2 min), then open the report
+  Open latest report.command  open the most recent report in your browser
+  Edit settings.command       change account size, risk per trade, options
+  Update scanner.command      download the latest version and reinstall
+
+  First time only: if macOS asks "Are you sure you want to open it?", click Open.
+
+THE SAME IN TERMINAL (copy and paste)
+  Run a scan now:          "$REPO/hybrid_scanner/mac/run_scan.sh"
+  Open latest report:      open "$HOME_DIR/latest-report.html"
+  Edit settings:           open -e "$HOME_DIR/settings.env"
+  Update the scanner:      cd "$REPO" && git pull && ./hybrid_scanner/mac/install.sh --no-test
+  Change the scan time:    cd "$REPO" && SCAN_HOUR=8 SCAN_MINUTE=0 ./hybrid_scanner/mac/install.sh --no-test
+  Is the schedule active?  launchctl list | grep hybridscanner
+  Stop the schedule:       "$REPO/hybrid_scanner/mac/uninstall.sh"
+
+WHERE THINGS ARE
+  Reports (one folder per day, kept 90 days):  $HOME_DIR/reports/
+  Latest report:                               $HOME_DIR/latest-report.html
+  Settings:                                    $HOME_DIR/settings.env
+  Logs (if something fails):                   $HOME_DIR/logs/
+
+READING A REPORT
+  Entry signals     stock, entry, stop, target, number of shares, chart.
+                    Prices are from the signal day's close; check the live price first.
+  Watch list        pulled back nicely, no trigger yet; candidates for the next days.
+  Momentum leaders  all current leaders, strongest first.
+
+Research output, not investment advice.
+GUIDE
+ok "Shortcuts: Run scan now · Open latest report · Edit settings · Update scanner · HOW TO USE.txt"
+
+# --------------------------------------------------------------------------- #
 if [ "$TEST" = 1 ]; then
   step "Test scan on 3 tickers (checks internet access, notifications, report)"
   TEST_OUT="$HOME_DIR/reports/install-test"
@@ -163,6 +241,7 @@ fi
 # --------------------------------------------------------------------------- #
 step "Done"
 cat <<EOF
+  Shortcuts:      open "$HOME_DIR"   (double-click Run scan now; see HOW TO USE.txt)
   Reports:        $HOME_DIR/reports/<date>/report.html
   Latest report:  open "$HOME_DIR/latest-report.html"
   Settings:       $HOME_DIR/settings.env

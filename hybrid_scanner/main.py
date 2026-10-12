@@ -39,7 +39,7 @@ from .config import DEFAULT_WATCHLIST, ScannerConfig
 from .models import EntrySignal, ScanReport
 from .notifiers import ConsoleNotifier, CSVExporter, DiscordNotifier, MacNotifier, TelegramNotifier, export_rejections
 from .signal_generator import HybridSignalGenerator, rejections_frame, signals_frame
-from .utils import get_logger, load_universe, make_provider, read_watchlist
+from .utils import drop_incomplete_daily_bar, get_logger, load_universe, make_provider, read_watchlist
 
 
 # --------------------------------------------------------------------------- #
@@ -334,6 +334,15 @@ def main(argv: list[str] | None = None) -> int:
     data, errors = load_universe(provider, tickers, dc.timeframe, dc.period, dc.min_bars, short_history)
     bench_data, _ = load_universe(provider, [dc.benchmark], dc.timeframe, dc.period)
     benchmark = bench_data.get(dc.benchmark.upper())
+    if dc.drop_incomplete_bar and dc.timeframe == "1d" and dc.source != "synthetic":
+        trimmed = {t: drop_incomplete_daily_bar(df) for t, df in data.items()}
+        n_trimmed = sum(len(trimmed[t]) < len(data[t]) for t in data)
+        if n_trimmed:
+            log.info("US market still open: ignoring today's unfinished candle (%d tickers) — "
+                     "signals use the last completed day", n_trimmed)
+        data = trimmed
+        if benchmark is not None:
+            benchmark = drop_incomplete_daily_bar(benchmark)
     if benchmark is None:
         log.warning("Benchmark %s unavailable — RS falls back to universe rank", dc.benchmark)
     if not data:

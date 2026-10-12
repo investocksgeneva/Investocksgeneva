@@ -69,6 +69,9 @@ class DataConfig:
     bars_per_day: int = 1
     #: Local cache for downloaded history ("" disables). Re-runs on a
     #: 500-name universe load from disk instead of re-downloading.
+    #: Ignore today's still-forming daily bar while the US session is open
+    #: (signals must only see completed candles). Daily timeframe only.
+    drop_incomplete_bar: bool = True
     cache_dir: str = "data/cache"
     cache_max_age_hours: float = 12.0
     refresh_cache: bool = False

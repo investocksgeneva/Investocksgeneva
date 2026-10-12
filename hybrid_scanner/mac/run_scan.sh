@@ -41,7 +41,7 @@ if [ ! -x "$PY" ]; then
 fi
 
 cd "$REPO" || exit 1
-{
+scan() {
   echo "=== $(date) — hybrid scan (equity $ACCOUNT_EQUITY, risk $RISK_PER_TRADE, universe $UNIVERSE)"
   # shellcheck disable=SC2086  # EXTRA_ARGS is intentionally word-split
   "$PY" -m hybrid_scanner.main --universe "$UNIVERSE" \
@@ -49,10 +49,18 @@ cd "$REPO" || exit 1
     --export --plot --output-dir "$OUT" --report "$OUT/report.html" \
     --state-file "$HOME_DIR/state/last_bar.txt" \
     --notify macos --alert-title "Hybrid scan" $EXTRA_ARGS
-} >>"$LOG" 2>&1
-rc=$?
+}
+if [ -t 1 ]; then
+  # Run by hand in Terminal: show progress as well as logging it.
+  echo "Scanning $UNIVERSE — about 2 minutes. Progress below; full log: $LOG"
+  scan 2>&1 | tee -a "$LOG"
+  rc=${PIPESTATUS[0]}
+else
+  scan >>"$LOG" 2>&1  # scheduled run: log only
+  rc=$?
+fi
 
-if [ $rc -ne 0 ]; then
+if [ "$rc" -ne 0 ]; then
   notify "Hybrid scan failed (exit $rc)" "See $LOG"
 elif [ -f "$OUT/report.html" ]; then
   ln -sfn "$OUT/report.html" "$HOME_DIR/latest-report.html"
@@ -64,4 +72,4 @@ fi
 find "$HOME_DIR/reports" -mindepth 1 -maxdepth 1 -type d -name '20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]' -mtime +90 -exec rm -rf {} + 2>/dev/null
 find "$HOME_DIR/logs" -maxdepth 1 -type f -name 'scan-*.log' -mtime +90 -delete 2>/dev/null
 
-exit $rc
+exit "$rc"
