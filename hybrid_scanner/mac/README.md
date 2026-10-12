@@ -66,6 +66,22 @@ SCAN_HOUR=22 SCAN_MINUTE=30 ./hybrid_scanner/mac/install.sh
 
 ---
 
+## Shortcuts: no Terminal needed
+
+Open your **HybridScanner** folder: in Finder press ⇧⌘H, then double-click
+*HybridScanner*. It contains:
+
+| Double-click | What it does |
+|---|---|
+| **Run scan now** | Scans the S&P 500 (about 2 minutes, with progress shown), then opens the report |
+| **Open latest report** | Opens the most recent report in your browser |
+| **Edit settings** | Opens your account size and risk settings in TextEdit |
+| **Update scanner** | Downloads the latest version and reinstalls it |
+| **HOW TO USE.txt** | A one-page cheat sheet with every command |
+
+The first time you open each shortcut, macOS may ask *"Are you sure you want
+to open it?"*. Click **Open**.
+
 ## Every day
 
 * **After the scan,** a notification arrives, for example
