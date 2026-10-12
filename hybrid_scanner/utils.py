@@ -107,36 +107,68 @@ class YFinanceProvider:
     limited to ~730 days.
     """
 
-    def __init__(self, batch_size: int = 100) -> None:
-        try:
-            import yfinance  # noqa: F401  (import check only)
-        except ImportError as exc:  # pragma: no cover - environment specific
-            raise ImportError("pip install yfinance  — or use --source csv/synthetic") from exc
+    def __init__(self, batch_size: int = 100, retry_failed: bool = True, download=None) -> None:
+        if download is None:
+            try:
+                import yfinance as yf
+            except ImportError as exc:  # pragma: no cover - environment specific
+                raise ImportError("pip install yfinance  — or use --source csv/synthetic") from exc
+            download = yf.download
         self.batch_size = batch_size
+        self.retry_failed = retry_failed
+        #: Injectable for tests; defaults to ``yfinance.download``.
+        self._download = download
 
     def get_history(self, ticker: str, timeframe: str, period: str) -> pd.DataFrame:
         return self.get_many([ticker], timeframe, period)[ticker]
 
     def get_many(self, tickers: Iterable[str], timeframe: str, period: str) -> dict[str, pd.DataFrame]:
-        """Batched download — dramatically faster than per-ticker calls for a
-        full-universe scan."""
-        import yfinance as yf
+        """Batched, threaded download — dramatically faster than per-ticker
+        calls for a full-universe scan.
 
+        Tickers that fail are retried once **without threads**. yfinance's
+        threaded downloads share an on-disk SQLite timezone cache, and
+        concurrent writers intermittently fail with ``database is locked`` —
+        dropping a random ticker or two per run. Serial retry removes the
+        contention; tickers that are genuinely unavailable fail again cheaply.
+        """
         tickers = list(dict.fromkeys(tickers))
         result: dict[str, pd.DataFrame] = {}
         for i in range(0, len(tickers), self.batch_size):
             batch = tickers[i : i + self.batch_size]
-            raw = yf.download(
-                batch, period=period, interval=timeframe, auto_adjust=True,
-                group_by="ticker", progress=False, threads=True,
-            )
-            for t in batch:
-                try:
-                    frame = raw[t] if isinstance(raw.columns, pd.MultiIndex) and t in raw.columns.get_level_values(0) else raw
-                    result[t] = normalize_ohlcv(frame.dropna(how="all"), t)
-                except (DataError, KeyError) as exc:
-                    log.warning("yfinance: %s", exc)
+            result.update(self._fetch(batch, timeframe, period, threads=True, quiet=self.retry_failed))
+        missing = [t for t in tickers if t not in result]
+        if missing and self.retry_failed:
+            log.info("yfinance: retrying %d failed ticker(s) serially: %s", len(missing), ", ".join(missing[:20]))
+            recovered = self._fetch(missing, timeframe, period, threads=False, quiet=False)
+            if recovered:
+                log.info("yfinance: recovered %d on retry", len(recovered))
+            result.update(recovered)
         return result
+
+    def _fetch(self, batch: list[str], timeframe: str, period: str, threads: bool, quiet: bool) -> dict[str, pd.DataFrame]:
+        out: dict[str, pd.DataFrame] = {}
+        try:
+            raw = self._download(
+                batch, period=period, interval=timeframe, auto_adjust=True,
+                group_by="ticker", progress=False, threads=threads,
+            )
+        except Exception as exc:  # network / vendor errors: report, don't abort the universe
+            log.warning("yfinance: batch download failed: %s", exc)
+            return out
+        if raw is None or raw.empty:
+            return out
+        for t in batch:
+            try:
+                multi = isinstance(raw.columns, pd.MultiIndex)
+                if multi and t not in raw.columns.get_level_values(0):
+                    raise DataError(f"{t}: no data")
+                frame = raw[t] if multi else raw
+                out[t] = normalize_ohlcv(frame.dropna(how="all"), t)
+            except (DataError, KeyError) as exc:
+                # First pass failures will be retried; only log the final outcome.
+                (log.debug if quiet else log.warning)("yfinance: %s", exc)
+        return out
 
 
 class CSVProvider:
@@ -291,10 +323,22 @@ def make_provider(cfg: DataConfig) -> DataProvider:
 
 
 def load_universe(
-    provider: DataProvider, tickers: Iterable[str], timeframe: str, period: str, min_bars: int = 0
+    provider: DataProvider,
+    tickers: Iterable[str],
+    timeframe: str,
+    period: str,
+    min_bars: int = 0,
+    short_history: dict[str, str] | None = None,
 ) -> tuple[dict[str, pd.DataFrame], dict[str, str]]:
     """Fetch many tickers; return ``(data, errors)`` instead of raising, so a
-    single bad symbol never aborts a 3,000-name scan."""
+    single bad symbol never aborts a 3,000-name scan.
+
+    Tickers with fewer than ``min_bars`` bars are excluded either way. Pass a
+    ``short_history`` dict to have them recorded there instead of in
+    ``errors``: a recent IPO or spin-off lacking 52 weeks of history is
+    expected, not a data failure, and lumping the two together trains users
+    to ignore the error count.
+    """
     tickers = list(dict.fromkeys(t.strip().upper() for t in tickers if t.strip()))
     data: dict[str, pd.DataFrame] = {}
     errors: dict[str, str] = {}
@@ -307,12 +351,16 @@ def load_universe(
                 data[t] = provider.get_history(t, timeframe, period)
             except Exception as exc:  # provider errors are heterogeneous
                 errors[t] = str(exc)
+    short_sink = short_history if short_history is not None else errors
     for t in list(data):
         if len(data[t]) < min_bars:
-            errors[t] = f"{len(data[t])} bars < required {min_bars}"
+            short_sink[t] = f"{len(data[t])} bars < required {min_bars}"
             del data[t]
     for t, e in errors.items():
         log.warning("data: %s — %s", t, e)
+    if short_history:
+        log.info("data: %d ticker(s) skipped for insufficient history (new listings/spin-offs): %s",
+                 len(short_history), ", ".join(sorted(short_history)))
     return data, errors
 
 

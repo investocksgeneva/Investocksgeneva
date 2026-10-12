@@ -148,6 +148,11 @@ are covered.
    faster run.
 
 Behaviour worth knowing:
+* **Data problems are named, not just counted.** Tickers that fail to load
+  are listed with ⚠️. Recent listings and spin-offs that lack the 260 bars of
+  history are listed separately, without a warning, because skipping them is
+  expected. A failed yfinance download is retried once without threads,
+  which avoids yfinance's intermittent `database is locked` error.
 * **A header is posted even when there are no signals.** A silent channel
   therefore means a broken job, not a quiet week.
 * **Failed delivery fails the run.** A missing secret, an HTTP error, or a

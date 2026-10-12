@@ -51,9 +51,9 @@ jobs:
       DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -83,7 +83,7 @@ jobs:
 
       - name: Upload signals, rejections and charts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: weekly-scan-${{ github.run_id }}
           path: output/

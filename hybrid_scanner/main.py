@@ -107,6 +107,10 @@ def print_report(report: ScanReport, show_rejections: bool = False) -> None:
         _print_header("Data errors")
         for t, e in report.errors.items():
             print(f"  {t}: {e}")
+    if report.short_history:
+        _print_header(f"Skipped — insufficient history ({len(report.short_history)})")
+        for t, e in report.short_history.items():
+            print(f"  {t}: {e}")
 
 
 def print_signals(signals: list[EntrySignal], title: str) -> None:
@@ -165,7 +169,12 @@ def alert_header(report: ScanReport, signals: list[EntrySignal], window: int, ti
         names = ", ".join(sorted(p.ticker for p in report.pending_setups)[:20])
         lines.append(f"Watch (pullback set up, awaiting trigger): {names}")
     if report.errors:
-        lines.append(f"⚠️ {len(report.errors)} ticker(s) had data errors")
+        names = ", ".join(sorted(report.errors)[:10])
+        lines.append(f"⚠️ {len(report.errors)} ticker(s) failed to load: {names}")
+    if report.short_history:
+        names = ", ".join(sorted(report.short_history)[:10])
+        more = f" +{len(report.short_history) - 10} more" if len(report.short_history) > 10 else ""
+        lines.append(f"Skipped (new listings, not enough history yet): {names}{more}")
     if signals:
         lines.append("_Levels are as of each signal's bar — re-check price before acting. Not investment advice._")
     else:
@@ -312,7 +321,8 @@ def main(argv: list[str] | None = None) -> int:
     log.info("Universe: %d tickers", len(tickers))
     provider = make_provider(cfg.data)
     dc = cfg.data
-    data, errors = load_universe(provider, tickers, dc.timeframe, dc.period, dc.min_bars)
+    short_history: dict[str, str] = {}
+    data, errors = load_universe(provider, tickers, dc.timeframe, dc.period, dc.min_bars, short_history)
     bench_data, _ = load_universe(provider, [dc.benchmark], dc.timeframe, dc.period)
     benchmark = bench_data.get(dc.benchmark.upper())
     if benchmark is None:
@@ -325,6 +335,7 @@ def main(argv: list[str] | None = None) -> int:
     prepared = gen.prepare_universe(data, benchmark)
     report = gen.scan(data, benchmark, as_of=args.as_of, prepared=prepared)
     report.errors.update(errors)
+    report.short_history.update(short_history)
     print_report(report, args.show_rejections)
 
     recent: list[EntrySignal] = []
