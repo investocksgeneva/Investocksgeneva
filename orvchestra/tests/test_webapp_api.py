@@ -146,6 +146,25 @@ def test_queue_and_playback_endpoints_against_this_device(db_conn, tmp_path):
     assert client.post("/api/queue/play", json={"track_ids": []}).status_code == 400
 
 
+def test_add_to_queue_appends_without_restarting_playback(db_conn, tmp_path):
+    _seed(db_conn, tmp_path)
+    client = _client(db_conn)
+    track_ids = [r["id"] for r in db_conn.execute("SELECT id FROM tracks ORDER BY rel_path")]
+
+    client.post("/api/queue/play", json={"track_ids": [track_ids[0]], "start_index": 0})
+    assert [t["title"] for t in client.get("/api/queue").json()["tracks"]] == ["Song One"]
+
+    resp = client.post("/api/queue/add", json={"track_ids": [track_ids[1]]})
+    assert resp.status_code == 200
+    assert resp.json()["track"]["title"] == "Song One"  # still the track that was already playing
+
+    resp = client.get("/api/queue")
+    assert [t["title"] for t in resp.json()["tracks"]] == ["Song One", "Song Two"]
+    assert resp.json()["position"] == 0
+
+    assert client.post("/api/queue/add", json={"track_ids": []}).status_code == 400
+
+
 def test_shuffle_and_repeat_endpoints(db_conn, tmp_path):
     _seed(db_conn, tmp_path)
     client = _client(db_conn)

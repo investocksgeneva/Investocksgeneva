@@ -317,6 +317,21 @@ export async function playQueue(trackIds, startIndex = 0) {
   }
 }
 
+// Appends to the end of the queue without touching what's currently
+// playing -- unlike playQueue(), which replaces the queue outright.
+export async function addToQueue(trackIds) {
+  try {
+    const np = await api.addToQueue(trackIds);
+    await refreshQueueList();
+    // The current track never changes here, so this only updates things
+    // like shuffle/repeat_mode state -- applyNowPlaying's this-device
+    // branch already no-ops a reload when the url hasn't changed.
+    await applyNowPlaying(np);
+  } catch (err) {
+    player.error = String(err.message || err);
+  }
+}
+
 export async function playRadioStation(station) {
   player.loading = true;
   player.error = null;

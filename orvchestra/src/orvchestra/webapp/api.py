@@ -33,6 +33,10 @@ class QueuePlayRequest(BaseModel):
     start_index: int = 0
 
 
+class QueueAddRequest(BaseModel):
+    track_ids: list[int]
+
+
 class SeekRequest(BaseModel):
     position_seconds: float
 
@@ -291,6 +295,13 @@ def build_api_router(conn: sqlite3.Connection, media_base_url: str, playback: Pl
             raise HTTPException(400, "track_ids must not be empty")
         playback.set_queue(body.track_ids, body.start_index)
         await playback.play_current()
+        return playback.now_playing()
+
+    @router.post("/queue/add")
+    async def add_to_queue(body: QueueAddRequest) -> dict[str, Any]:
+        if not body.track_ids:
+            raise HTTPException(400, "track_ids must not be empty")
+        playback.add_to_queue(body.track_ids)
         return playback.now_playing()
 
     @router.post("/playback/resume")

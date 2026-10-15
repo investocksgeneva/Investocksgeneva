@@ -1,7 +1,7 @@
 <script>
   import { api, formatDuration } from "../lib/api.js";
   import { navigate } from "../lib/router.svelte.js";
-  import { playQueue } from "../lib/player.svelte.js";
+  import { playQueue, addToQueue } from "../lib/player.svelte.js";
   import TrackList from "../lib/TrackList.svelte";
 
   let { id } = $props();
@@ -20,6 +20,10 @@
 
   function playAll() {
     if (album?.tracks.length) playQueue(album.tracks.map((t) => t.id), 0);
+  }
+
+  function queueAll() {
+    if (album?.tracks.length) addToQueue(album.tracks.map((t) => t.id));
   }
 </script>
 
@@ -52,13 +56,18 @@
             · <span style="color: var(--danger)">{album.offline_track_count} offline</span>
           {/if}
         </p>
-        <button
-          class="badge"
-          style="margin-top:14px; font-size:0.85rem; padding:8px 20px"
-          onclick={playAll}
-        >
-          ▶ Play album
-        </button>
+        <div style="display:flex; gap:10px; margin-top:14px">
+          <button class="badge" style="font-size:0.85rem; padding:8px 20px" onclick={playAll}>
+            ▶ Play album
+          </button>
+          <button
+            class="badge"
+            style="font-size:0.85rem; padding:8px 20px; background:var(--bg-card); color:var(--text)"
+            onclick={queueAll}
+          >
+            + Queue
+          </button>
+        </div>
       </div>
 
       <div class="album-tracks-pane">

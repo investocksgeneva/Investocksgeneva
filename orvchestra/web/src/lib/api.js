@@ -57,6 +57,7 @@ export const api = {
   nowPlaying: () => request("/api/now-playing"),
   queue: () => request("/api/queue"),
   playQueue: (trackIds, startIndex = 0) => post("/api/queue/play", { track_ids: trackIds, start_index: startIndex }),
+  addToQueue: (trackIds) => post("/api/queue/add", { track_ids: trackIds }),
 
   resume: () => post("/api/playback/resume"),
   pause: () => post("/api/playback/pause"),

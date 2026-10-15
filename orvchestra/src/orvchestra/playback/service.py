@@ -182,6 +182,22 @@ class PlaybackService:
         self.queue_position = self.queue.index(start_id) if start_id is not None else 0
         self._pushed_next_track_id = None
 
+    def add_to_queue(self, track_ids: list[int]) -> None:
+        """Appends to the end of the queue without disturbing whatever's
+        already playing -- unlike `set_queue`, which replaces it outright.
+        Appended in the given order regardless of shuffle, since shuffling
+        only applies to what the queue already held when it was turned on,
+        not to tracks added afterward."""
+        if not track_ids:
+            return
+        self._current_radio = None
+        self._unshuffled_queue.extend(track_ids)
+        self.queue.extend(track_ids)
+        # An empty queue had no "next" to push; a freshly-non-empty one
+        # might now have one, so the WiiM's gapless pre-queue needs
+        # re-checking the same way shuffle/repeat toggling does.
+        self._pushed_next_track_id = None
+
     @staticmethod
     def _shuffled(track_ids: list[int], keep_first: int | None) -> list[int]:
         """A random order for the given tracks, with `keep_first` (if given

@@ -182,6 +182,51 @@ def test_next_and_previous_navigate_queue(db_conn, tmp_path):
     assert service.queue_position == 1
 
 
+def test_add_to_queue_appends_without_disturbing_playback(db_conn, tmp_path):
+    track_ids = _seed_three_tracks(db_conn, tmp_path)
+    service = _service(db_conn)
+    service.set_queue(track_ids, start_index=1)
+    asyncio.run(service.play_current())
+    assert service.current_track_id() == track_ids[1]
+    assert service.queue_position == 1
+
+    service.add_to_queue([track_ids[0]])  # append track 1 again, arbitrary extra track
+
+    assert service.queue == [*track_ids, track_ids[0]]
+    assert service.queue_position == 1  # unchanged -- still on the same track
+    assert service.current_track_id() == track_ids[1]  # still playing the same thing
+
+
+def test_add_to_queue_gives_a_next_track_to_push_on_wiim(db_conn, tmp_path):
+    track_ids = _seed_three_tracks(db_conn, tmp_path)
+    service = _service(db_conn)
+    renderer = FakeRenderer()
+    service.renderers = {renderer.udn: renderer}
+    service.select_output(renderer.udn)
+    service.set_queue(track_ids, start_index=2)  # start at the last track -- nothing queued as "next"
+    asyncio.run(service.play_current())
+    assert service._pushed_next_track_id is None
+
+    service.add_to_queue([track_ids[0]])
+    assert service._pushed_next_track_id is None  # invalidated, not yet re-pushed
+
+    asyncio.run(service._poll_once())  # the unconditional re-push catches up within one tick
+    assert service._pushed_next_track_id == track_ids[0]
+    track1_url, _, _ = service._track_url_and_metadata(track_ids[0])
+    assert renderer._next_uri == track1_url
+
+
+def test_add_to_queue_ignores_an_empty_list(db_conn, tmp_path):
+    track_ids = _seed_three_tracks(db_conn, tmp_path)
+    service = _service(db_conn)
+    service.set_queue(track_ids)
+    asyncio.run(service.play_current())
+
+    service.add_to_queue([])
+
+    assert service.queue == track_ids  # unchanged
+
+
 def test_this_device_output_never_touches_a_renderer(db_conn, tmp_path):
     track_ids = _seed_three_tracks(db_conn, tmp_path)
     service = _service(db_conn)

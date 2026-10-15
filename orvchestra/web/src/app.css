@@ -125,6 +125,39 @@ h3 {
   text-align: left;
 }
 
+/* TrackList rows: a non-interactive wrapper around the row's own play
+   button plus a separate "add to queue" button, so the two don't end up
+   as nested interactive elements (invalid HTML, and the source of a real
+   build failure once before -- see the README). */
+.row-item-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.row-item-wrap .row-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.row-item-wrap.active .row-title {
+  color: var(--accent);
+}
+
+.row-add-queue {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 4px;
+}
+
 .row-item .row-art {
   width: 44px;
   height: 44px;
