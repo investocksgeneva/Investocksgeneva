@@ -16,13 +16,14 @@ from typing import Iterable
 import pandas as pd
 
 from .models import EntrySignal, ScanReport
+from .tracking import TrackedSignal
 
 _CSS = """
 :root { --bg:#fcfcfb; --fg:#0b0b0b; --muted:#52514e; --line:#e6e5e0; --card:#ffffff;
-        --accent:#2a78d6; --good:#0ca30c; --bad:#d03b3b; }
+        --accent:#2a78d6; --good:#0ca30c; --bad:#d03b3b; --warn:#b07800; }
 @media (prefers-color-scheme: dark) {
   :root { --bg:#1a1a19; --fg:#f0efec; --muted:#c3c2b7; --line:#383835; --card:#232322;
-          --accent:#3987e5; --good:#3fbf3f; --bad:#e66767; } }
+          --accent:#3987e5; --good:#3fbf3f; --bad:#e66767; --warn:#e0a400; } }
 * { box-sizing:border-box; }
 body { margin:0; background:var(--bg); color:var(--fg);
        font:15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
@@ -39,7 +40,8 @@ th { color:var(--muted); font-weight:600; } td.num, th.num { text-align:right; f
 .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:16px; margin:16px 0; }
 .card h3 { margin:0 0 4px; font-size:17px; } .card p { margin:4px 0; color:var(--muted); }
 .levels { display:flex; flex-wrap:wrap; gap:16px; margin:8px 0; font-variant-numeric:tabular-nums; }
-.stop { color:var(--bad); } .target { color:var(--good); }
+.stop { color:var(--bad); } .target { color:var(--good); } .extended { color:var(--warn); }
+.status { font-weight:600; }
 img { max-width:100%; height:auto; border-radius:6px; margin-top:8px; }
 .note { color:var(--muted); font-size:13px; }
 .empty { color:var(--muted); font-style:italic; }
@@ -72,6 +74,8 @@ def write_html_report(
     n_tickers: int,
     window: int = 1,
     plots: dict[tuple[str, object], Path] | None = None,
+    recent: list[TrackedSignal] | None = None,
+    recent_window: int = 0,
 ) -> Path:
     """Write the report and return its path."""
     plots = plots or {}
@@ -112,6 +116,27 @@ def write_html_report(
             ]
     else:
         parts.append('<p class="empty">No new entry signals.</p>')
+
+    if recent_window > 0:
+        parts.append(f"<h2>Recent signals — last {recent_window} trading days</h2>")
+        if recent:
+            parts.append('<p class="note">Earlier signals and what happened since. Prices are the latest close; '
+                         "R = profit or loss in units of the planned risk.</p>")
+            css = {"target": "target", "stopped": "stop", "extended": "extended", "valid": ""}
+            rows = "".join(
+                f"<tr><td>{_e(r.signal.ticker)}</td><td>{r.signal.timestamp:%Y-%m-%d}</td>"
+                f"<td class='num'>{r.signal.entry_price:,.2f}</td><td class='num'>{r.signal.stop_loss:,.2f}</td>"
+                f"<td class='num'>{r.signal.target_price:,.2f}</td><td class='num'>{r.last_close:,.2f}</td>"
+                f"<td class='num'>{r.r_now:+.2f}R</td>"
+                f"<td class='status {css[r.status]}'>{_e(r.label)}"
+                + (f" ({r.event_date:%m-%d})" if r.event_date is not None else "") + "</td></tr>"
+                for r in recent
+            )
+            parts.append('<div class="scroll"><table><tr><th>Ticker</th><th>Signal</th><th class="num">Entry</th>'
+                         '<th class="num">Stop</th><th class="num">Target</th><th class="num">Now</th>'
+                         f'<th class="num">R</th><th>Status</th></tr>{rows}</table></div>')
+        else:
+            parts.append('<p class="empty">No signals in that period.</p>')
 
     parts.append("<h2>Watch list — pullback set up, awaiting a trigger</h2>")
     if report.pending_setups:

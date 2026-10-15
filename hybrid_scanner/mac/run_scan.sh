@@ -48,7 +48,7 @@ scan() {
     --equity "$ACCOUNT_EQUITY" --risk "$RISK_PER_TRADE" \
     --export --plot --output-dir "$OUT" --report "$OUT/report.html" \
     --state-file "$HOME_DIR/state/last_bar.txt" \
-    --notify macos --alert-title "Hybrid scan" $EXTRA_ARGS
+    --track 5 --notify macos --alert-title "Hybrid scan" $EXTRA_ARGS
 }
 if [ -t 1 ]; then
   # Run by hand in Terminal: show progress as well as logging it.
