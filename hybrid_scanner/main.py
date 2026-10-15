@@ -262,6 +262,8 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--alert-window", type=int, default=1, metavar="N",
                    help="alert/export signals from the last N bars, not just the latest (weekly job: 5)")
     g.add_argument("--alert-title", default="Hybrid scan", help="title line of the alert header")
+    g.add_argument("--track", type=int, default=0, metavar="N",
+                   help="follow up on signals from the previous N trading days (target hit, stopped, still valid…)")
     g.add_argument("--output-dir", metavar="DIR", help="write CSVs and charts here instead of ./output")
     g.add_argument("--report", metavar="PATH", help="write a self-contained HTML report (signals, charts, watch list)")
     g.add_argument("--state-file", metavar="PATH",
@@ -367,7 +369,7 @@ def main(argv: list[str] | None = None) -> int:
     recent: list[EntrySignal] = []
     windowed: list[EntrySignal] = []
     history: dict[str, list[EntrySignal]] = {}
-    if args.recent or args.backtest or args.portfolio or args.alert_window > 1:
+    if args.recent or args.backtest or args.portfolio or args.alert_window > 1 or args.track:
         for t, p in prepared.items():
             history[t] = gen.signal_history(p)
         if args.recent:
@@ -408,12 +410,28 @@ def main(argv: list[str] | None = None) -> int:
             plots[(s.ticker, s.timestamp)] = path
             log.info("Saved %s", path)
 
+    tracked = []
+    if args.track:
+        from .tracking import track_signals
+
+        shown = {(s.ticker, s.timestamp) for s in to_alert}
+        earlier = [s for s in signals_in_window(history, prepared, args.track + 1)
+                   if (s.ticker, s.timestamp) not in shown]
+        tracked = track_signals(earlier, {t: p.df for t, p in prepared.items()})
+        _print_header(f"Recent signals — last {args.track} trading days  ({len(tracked)})")
+        for r in tracked:
+            print(f"  {r.signal.ticker:<6} {r.signal.timestamp:%Y-%m-%d}  entry {r.signal.entry_price:>9.2f}  "
+                  f"now {r.last_close:>9.2f}  {r.r_now:+.2f}R  {r.label}")
+        if not tracked:
+            print("  none")
+
     report_path = None
     if args.report:
         from .report import write_html_report
 
         report_path = write_html_report(args.report, report, to_alert, title=args.alert_title,
-                                        n_tickers=len(prepared), window=args.alert_window, plots=plots)
+                                        n_tickers=len(prepared), window=args.alert_window, plots=plots,
+                                        recent=tracked, recent_window=args.track)
         log.info("Wrote report %s", report_path)
 
     dry = not args.live_alerts

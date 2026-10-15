@@ -98,6 +98,9 @@ Each report shows:
 
 * the **entry signals**, with entry, stop, target, position size and a chart
   for each;
+* **recent signals** from the previous 5 trading days, with what happened since:
+  ✓ target hit, ✗ stopped out, ● still valid near entry, or ▲ extended (too far
+  above entry to buy now);
 * the **watch list**, meaning stocks with a valid pullback that haven't
   triggered yet;
 * all **momentum candidates**.
