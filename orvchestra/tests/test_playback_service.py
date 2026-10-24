@@ -34,13 +34,26 @@ class FakeRenderer:
         self.volume_level = 0.5
         self.calls: list[tuple] = []
         self._next_uri: str | None = None
+        # How many times each action should raise before succeeding --
+        # simulates a transient connectivity blip (see
+        # test_renderer_recovery.py-style tests below), without affecting
+        # any test that never touches this (defaults to never failing).
+        self.fail_times: dict[str, int] = {}
+
+    def _maybe_fail(self, action: str) -> None:
+        remaining = self.fail_times.get(action, 0)
+        if remaining > 0:
+            self.fail_times[action] = remaining - 1
+            raise OSError(51, "Network is unreachable")
 
     async def async_set_transport_uri(self, url, title, meta_data=None):
+        self._maybe_fail("set_transport_uri")
         self.calls.append(("set_transport_uri", url))
         self.av_transport_uri = url
         self.transport_state = TransportState.STOPPED
 
     async def async_set_next_transport_uri(self, url, title, meta_data=None):
+        self._maybe_fail("set_next_transport_uri")
         self.calls.append(("set_next_transport_uri", url))
         self._next_uri = url
 
@@ -48,21 +61,26 @@ class FakeRenderer:
         pass
 
     async def async_play(self):
+        self._maybe_fail("play")
         self.calls.append(("play",))
         self.transport_state = TransportState.PLAYING
 
     async def async_pause(self):
+        self._maybe_fail("pause")
         self.calls.append(("pause",))
         self.transport_state = TransportState.PAUSED_PLAYBACK
 
     async def async_stop(self):
+        self._maybe_fail("stop")
         self.calls.append(("stop",))
         self.transport_state = TransportState.STOPPED
 
     async def async_seek_abs_time(self, time):
+        self._maybe_fail("seek")
         self.calls.append(("seek", time))
 
     async def async_set_volume_level(self, level):
+        self._maybe_fail("set_volume")
         self.volume_level = level
 
     async def async_update(self):

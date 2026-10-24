@@ -13,12 +13,12 @@ import sqlite3
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
-from starlette.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request
+from starlette.responses import FileResponse, JSONResponse
 
 from orvchestra import paths
 from orvchestra.media.app import build_media_router
-from orvchestra.playback.service import PlaybackService
+from orvchestra.playback.service import PlaybackService, RendererUnavailableError
 from orvchestra.webapp.api import build_api_router
 from orvchestra.webapp.playlists_api import build_playlists_router
 from orvchestra.webapp.radio_api import build_radio_router
@@ -51,6 +51,16 @@ def create_app(conn: sqlite3.Connection, media_base_url: str, playback: Playback
             await playback.shutdown()
 
     app = FastAPI(title="Orvchestra", docs_url=None, redoc_url=None, lifespan=lifespan)
+
+    @app.exception_handler(RendererUnavailableError)
+    async def renderer_unavailable_handler(request: Request, exc: RendererUnavailableError) -> JSONResponse:
+        # Covers every endpoint automatically: a renderer command that still
+        # fails after PlaybackService's own refresh-and-retry (see
+        # service.py) is a real, if hopefully rare, "the WiiM is
+        # unreachable right now" -- worth a clean 503 the frontend can show
+        # a message for, not a raw 500 traceback.
+        return JSONResponse(status_code=503, content={"detail": str(exc)})
+
     app.include_router(build_media_router(conn))
     app.include_router(build_api_router(conn, media_base_url, playback))
     app.include_router(build_stats_router(conn, media_base_url))

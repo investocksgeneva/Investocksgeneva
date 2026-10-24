@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
+from async_upnp_client.exceptions import UpnpError
 from async_upnp_client.profiles.dlna import DmrDevice, TransportState
 
 from orvchestra.db import repository as repo
@@ -33,6 +34,20 @@ logger = logging.getLogger("orvchestra.playback")
 
 THIS_DEVICE = "this-device"
 _POLL_INTERVAL_SECONDS = 1.0
+
+# What a renderer call can raise on a transient network blip (a Wi-Fi
+# reconnect, a VPN route change, the amp briefly dropping off) -- UpnpError
+# is async_upnp_client's own base class (covers a rejected action like
+# "704 play not allowed" just as much as a dropped connection), OSError/
+# TimeoutError catch anything raised before it gets wrapped into one.
+_RENDERER_ERRORS = (UpnpError, OSError, asyncio.TimeoutError)
+
+
+class RendererUnavailableError(Exception):
+    """A renderer command still failed after refreshing discovery and
+    retrying once -- surfaced to the API as a clean 503 instead of an
+    unhandled 500, for a renderer that's genuinely gone (powered off,
+    moved networks) rather than just blipped."""
 
 # "Count a play after 50% or 4 minutes, whichever comes first" -- so the
 # threshold is whichever of those two is *smaller*: a 3-minute track counts
@@ -264,19 +279,43 @@ class PlaybackService:
         metadata = didl.serialize([didl.build_track_element(row, parent_id, self.media_base_url)])
         return url, row["title"] or "", metadata
 
+    async def _call_renderer(self, action_name: str, call) -> None:
+        """Runs a renderer action, and on a transient connectivity failure
+        (a Wi-Fi reconnect, a VPN route change, the amp briefly dropping
+        off), refreshes renderer discovery and retries once before giving
+        up. `_poll_once` already shrugs off this exact class of error on
+        its own every tick, but a one-off command like Play has no next
+        tick to self-heal on -- without this, it surfaced as a raw
+        unhandled exception (a 500) straight to whoever pressed play."""
+        try:
+            await call()
+        except _RENDERER_ERRORS as exc:
+            logger.warning("%s failed (%s); refreshing renderers and retrying once", action_name, exc)
+            await self.refresh_renderers()
+            if self.active_renderer is None:
+                raise RendererUnavailableError(f"{action_name}: renderer is no longer reachable") from exc
+            try:
+                await call()
+            except _RENDERER_ERRORS as exc2:
+                raise RendererUnavailableError(f"{action_name}: still failing after retry ({exc2})") from exc2
+
     async def play_current(self) -> None:
         track_id = self.current_track_id()
         if track_id is None:
             return
         self._start_play_session(track_id)
 
-        renderer = self.active_renderer
-        if renderer is None:
+        if self.active_renderer is None:
             return
         url, title, metadata = self._track_url_and_metadata(track_id)
-        await renderer.async_set_transport_uri(url, title, meta_data=metadata)
-        await renderer.async_wait_for_can_play()
-        await renderer.async_play()
+
+        async def _do() -> None:
+            renderer = self.active_renderer
+            await renderer.async_set_transport_uri(url, title, meta_data=metadata)
+            await renderer.async_wait_for_can_play()
+            await renderer.async_play()
+
+        await self._call_renderer("play", _do)
         self._pushed_next_track_id = None
         await self._push_next_if_needed()
         self._ensure_poll_task()
@@ -291,39 +330,64 @@ class PlaybackService:
         self._play_session = None
         self._current_radio = station
 
-        renderer = self.active_renderer
-        if renderer is None:
+        if self.active_renderer is None:
             return
-        await renderer.async_set_transport_uri(station["stream_url"], station["name"], meta_data="")
-        await renderer.async_wait_for_can_play()
-        await renderer.async_play()
+
+        async def _do() -> None:
+            renderer = self.active_renderer
+            await renderer.async_set_transport_uri(station["stream_url"], station["name"], meta_data="")
+            await renderer.async_wait_for_can_play()
+            await renderer.async_play()
+
+        await self._call_renderer("play_radio", _do)
         self._ensure_poll_task()
 
     async def _push_next_if_needed(self) -> None:
-        renderer = self.active_renderer
         next_id = self.next_track_id()
-        if renderer is None or next_id is None or next_id == self._pushed_next_track_id:
+        if self.active_renderer is None or next_id is None or next_id == self._pushed_next_track_id:
             return
-        if not renderer.has_next_transport_uri:
+        if not self.active_renderer.has_next_transport_uri:
             return
         url, title, metadata = self._track_url_and_metadata(next_id)
-        await renderer.async_set_next_transport_uri(url, title, meta_data=metadata)
+
+        async def _do() -> None:
+            renderer = self.active_renderer
+            await renderer.async_set_next_transport_uri(url, title, meta_data=metadata)
+
+        try:
+            await self._call_renderer("push_next", _do)
+        except RendererUnavailableError:
+            # Not fatal -- gapless pre-queueing is a nice-to-have; the next
+            # poll tick (or the next track actually starting) will try again.
+            return
         self._pushed_next_track_id = next_id
 
     async def pause(self) -> None:
         if self.active_renderer is not None:
-            await self.active_renderer.async_pause()
+            await self._call_renderer("pause", lambda: self.active_renderer.async_pause())
 
     async def resume(self) -> None:
         if self.active_renderer is not None:
-            await self.active_renderer.async_play()
+            await self._call_renderer("resume", lambda: self.active_renderer.async_play())
             self._ensure_poll_task()
 
     async def stop(self) -> None:
-        if self.active_renderer is not None:
-            await self.active_renderer.async_stop()
-        self._cancel_poll_task()
-        self.keep_awake.set_active(self._renderer_keepawake_id(), False)
+        # Captured before the renderer call: a failed call's own
+        # refresh-and-retry can reset active_output back to THIS_DEVICE as
+        # a side effect (see refresh_renderers) if the renderer turns out
+        # to be genuinely gone, which would silently change what key the
+        # cleanup below releases -- leaking the *original* keep-awake
+        # source forever instead of ever turning caffeinate back off.
+        keepawake_id = self._renderer_keepawake_id()
+        try:
+            if self.active_renderer is not None:
+                await self._call_renderer("stop", lambda: self.active_renderer.async_stop())
+        finally:
+            # Even if we couldn't reach the renderer to tell it to stop,
+            # our own side still needs to stop polling and release
+            # keep-awake -- there's nothing left here worth doing that for.
+            self._cancel_poll_task()
+            self.keep_awake.set_active(keepawake_id, False)
 
     async def next(self, *, auto: bool = False) -> None:
         """Advances to the next track. `auto=True` means this is the track
@@ -354,11 +418,13 @@ class PlaybackService:
 
     async def seek(self, position_seconds: float) -> None:
         if self.active_renderer is not None:
-            await self.active_renderer.async_seek_abs_time(timedelta(seconds=max(0, position_seconds)))
+            target = timedelta(seconds=max(0, position_seconds))
+            await self._call_renderer("seek", lambda: self.active_renderer.async_seek_abs_time(target))
 
     async def set_volume(self, level: float) -> None:
         if self.active_renderer is not None:
-            await self.active_renderer.async_set_volume_level(max(0.0, min(1.0, level)))
+            clamped = max(0.0, min(1.0, level))
+            await self._call_renderer("set_volume", lambda: self.active_renderer.async_set_volume_level(clamped))
 
     # --- this-device (browser) playback ----------------------------------
 

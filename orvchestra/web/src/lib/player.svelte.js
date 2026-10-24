@@ -347,6 +347,16 @@ export async function playRadioStation(station) {
   }
 }
 
+// Renderer commands (pause/resume/skip/seek/volume/shuffle/repeat) hit the
+// WiiM over the network and can fail -- a dropped Wi-Fi route, the amp
+// mid-reconnect. The backend already retries once on its own (see
+// PlaybackService._call_renderer); if it still fails, surface *something*
+// here rather than the button silently doing nothing, which is exactly
+// what "skip doesn't respond" looks like from the outside.
+function reportError(err) {
+  player.error = String(err.message || err);
+}
+
 export async function togglePlayPause() {
   if (player.selectedOutput === THIS_DEVICE) {
     const el = activeEl();
@@ -355,12 +365,20 @@ export async function togglePlayPause() {
     else el.pause();
     return;
   }
-  const np = player.isPlaying ? await api.pause() : await api.resume();
-  await applyNowPlaying(np);
+  try {
+    const np = player.isPlaying ? await api.pause() : await api.resume();
+    await applyNowPlaying(np);
+  } catch (err) {
+    reportError(err);
+  }
 }
 
 export async function next() {
-  await applyNowPlaying(await api.next());
+  try {
+    await applyNowPlaying(await api.next());
+  } catch (err) {
+    reportError(err);
+  }
 }
 
 // Used only by the this-device <audio> element's own "ended" event (see
@@ -368,23 +386,39 @@ export async function next() {
 // replays a track that finished on its own, not one a deliberate skip
 // (the next() exported above, used by transport buttons) moved past.
 async function autoAdvance() {
-  await applyNowPlaying(await api.autoNext());
+  try {
+    await applyNowPlaying(await api.autoNext());
+  } catch (err) {
+    reportError(err);
+  }
 }
 
 export async function previous() {
-  await applyNowPlaying(await api.previous());
+  try {
+    await applyNowPlaying(await api.previous());
+  } catch (err) {
+    reportError(err);
+  }
 }
 
 export async function toggleShuffle() {
-  await applyNowPlaying(await api.setShuffle(!player.shuffle));
-  await refreshQueueList().catch(() => {});
+  try {
+    await applyNowPlaying(await api.setShuffle(!player.shuffle));
+    await refreshQueueList().catch(() => {});
+  } catch (err) {
+    reportError(err);
+  }
 }
 
 const _REPEAT_CYCLE = ["off", "all", "one"];
 
 export async function cycleRepeat() {
   const nextMode = _REPEAT_CYCLE[(_REPEAT_CYCLE.indexOf(player.repeatMode) + 1) % _REPEAT_CYCLE.length];
-  await applyNowPlaying(await api.setRepeat(nextMode));
+  try {
+    await applyNowPlaying(await api.setRepeat(nextMode));
+  } catch (err) {
+    reportError(err);
+  }
 }
 
 export async function seek(seconds) {
@@ -394,7 +428,11 @@ export async function seek(seconds) {
     player.positionSeconds = seconds;
     return;
   }
-  await applyNowPlaying(await api.seek(seconds));
+  try {
+    await applyNowPlaying(await api.seek(seconds));
+  } catch (err) {
+    reportError(err);
+  }
 }
 
 export async function setVolume(level) {
@@ -404,7 +442,11 @@ export async function setVolume(level) {
     player.volume = level;
     return;
   }
-  await applyNowPlaying(await api.setVolume(level));
+  try {
+    await applyNowPlaying(await api.setVolume(level));
+  } catch (err) {
+    reportError(err);
+  }
 }
 
 export { THIS_DEVICE };

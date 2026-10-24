@@ -72,6 +72,13 @@
 <audio bind:this={audioEl} preload="metadata"></audio>
 <audio bind:this={radioAudioEl}></audio>
 
+{#if player.error}
+  <div class="error-banner" role="alert">
+    <span>{player.error}</span>
+    <button aria-label="Dismiss" onclick={() => (player.error = null)}>✕</button>
+  </div>
+{/if}
+
 <main class="screen">
   <screen.component {...screen.props} />
 </main>

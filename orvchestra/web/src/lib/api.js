@@ -8,8 +8,18 @@ async function request(path, options = {}) {
     ...options,
   });
   if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`${response.status} ${response.statusText}${detail ? `: ${detail}` : ""}`);
+    const text = await response.text().catch(() => "");
+    // FastAPI's own error shape (both HTTPException and our custom
+    // RendererUnavailableError handler) is {"detail": "..."} -- surface
+    // that plain string instead of the raw JSON blob when present.
+    let detail = text;
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed.detail === "string") detail = parsed.detail;
+    } catch {
+      // Not JSON -- use the raw response text as-is.
+    }
+    throw new Error(detail || `${response.status} ${response.statusText}`);
   }
   if (response.status === 204) return null;
   return response.json();
